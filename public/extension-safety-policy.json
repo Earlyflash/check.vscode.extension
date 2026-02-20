@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "weights": {
+    "publisher": 20,
+    "update": 20,
+    "behaviour": 30,
+    "supplyChain": 20,
+    "reputation": 10
+  },
+  "thresholds": {
+    "review": 31,
+    "block": 61
+  },
+  "rules": {
+    "publisher": {
+      "verifiedRequired": false,
+      "blockIfPublisherChangedDays": 90,
+      "blockIfDormantMonths": 24
+    },
+    "update": {
+      "flagIfDormantMonths": 12,
+      "flagIfMajorJumpAfterDormancy": true,
+      "highRiskRecentUpdateDays": 7
+    },
+    "reputation": {
+      "minInstalls": 1000,
+      "minRating": 3.0
+    },
+    "behaviour": {
+      "blockIfObfuscated": true,
+      "flagIfUsesChildProcess": true,
+      "flagIfUsesEval": true,
+      "flagIfHardcodedIP": true,
+      "flagIfDynamicDownload": true
+    },
+    "supplyChain": {
+      "requirePublicRepo": true,
+      "flagIfRepoTransferredRecentlyDays": 90,
+      "flagIfNewMaintainerDays": 60
+    }
+  }
+}

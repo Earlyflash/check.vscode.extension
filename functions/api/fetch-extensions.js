@@ -37,6 +37,7 @@ async function fetchOneExtension(extensionId) {
       lastVersionUpdateDate: '',
       rating: '',
       installCount: '',
+      publisherVerified: false,
     };
   }
 
@@ -53,6 +54,7 @@ async function fetchOneExtension(extensionId) {
       lastVersionUpdateDate: '',
       rating: '',
       installCount: '',
+      publisherVerified: false,
     };
   }
 
@@ -69,6 +71,8 @@ async function fetchOneExtension(extensionId) {
   const rating = stat != null ? String(Number(stat.value).toFixed(2)) : '';
   const installStat = (ext.statistics || []).find((s) => s.statisticName === 'install');
   const installCount = installStat != null ? String(Math.round(Number(installStat.value))) : '';
+  const publisherFlags = ext.publisher?.flags ?? '';
+  const publisherVerified = typeof publisherFlags === 'string' && publisherFlags.indexOf('verified') !== -1;
 
   return {
     extensionId,
@@ -80,6 +84,7 @@ async function fetchOneExtension(extensionId) {
     lastVersionUpdateDate,
     rating,
     installCount,
+    publisherVerified,
   };
 }
 

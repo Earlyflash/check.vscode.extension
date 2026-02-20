@@ -8,6 +8,24 @@ A small site for entering multiple VS Code extension names in `publisher.extensi
 - **Parsed list**: Shows each line as OK or Invalid format.
 - **Fetch details**: Calls the Marketplace API and shows publisher, extension name, current/last version, last version update date, and rating.
 - **Copy to Excel**: Results are shown as a table and as tab-separated text so you can paste into Excel or Google Sheets.
+- **Risk score**: Each extension is evaluated against a configurable safety policy; the table shows **Risk score**, **Decision** (ALLOW / REVIEW / BLOCK), and **Triggered rules**. Rows are highlighted for REVIEW (amber) and BLOCK (red).
+
+## Extension safety policy
+
+The app uses a **codified, machine-evaluable ruleset** to score extensions:
+
+- **Policy**: `public/extension-safety-policy.json` — weights (publisher, update, behaviour, supply chain, reputation), thresholds (review, block), and rule parameters.
+- **Evaluator**: Same logic runs in the browser (see `evaluateExtension` in `index.html`) and in Node for CI/ingestion in `evaluate-extension.js` (no external deps).
+
+Scoring uses only data available from the Marketplace API today (e.g. last update date, installs, rating). Behaviour/supply-chain rules (obfuscation, child process, repo transfer, etc.) are evaluated when metadata is provided (e.g. by a static analyser or scanner).
+
+**Run the evaluator locally (example):**
+
+```bash
+node evaluate-extension.js
+```
+
+Edit `evaluate-extension.js` to pass your own `metadata` and policy path, or `require('./evaluate-extension')` and call `evaluateExtension(metadata, policy)`.
 
 ## Local development
 
