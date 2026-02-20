@@ -28,9 +28,11 @@ For **Fetch details** to work, the `functions` directory must be deployed. Use G
 3. Set **Build output directory** to `public`. Leave build command empty.
 4. Deploy.
 
-**CLI deploy** (static site only; no API):
+**CLI deploy** (uploads `public` only; for API use Git deploy):
 
 ```bash
 npm install -g wrangler
-wrangler pages deploy public --project-name=check-vscode-extension
+npm run deploy
 ```
+
+Or directly: **`wrangler pages deploy`** (not `wrangler deploy` — that is for Workers).
