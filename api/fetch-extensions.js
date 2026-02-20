@@ -32,6 +32,7 @@ async function fetchOneExtension(extensionId) {
       lastVersion: '',
       lastVersionUpdateDate: '',
       rating: '',
+      ratingCount: '',
       installCount: '',
       publisherVerified: false,
     };
@@ -49,6 +50,7 @@ async function fetchOneExtension(extensionId) {
       lastVersion: '',
       lastVersionUpdateDate: '',
       rating: '',
+      ratingCount: '',
       installCount: '',
       publisherVerified: false,
     };
@@ -65,6 +67,8 @@ async function fetchOneExtension(extensionId) {
 
   const stat = (ext.statistics || []).find((s) => s.statisticName === 'averagerating');
   const rating = stat != null ? String(Number(stat.value).toFixed(2)) : '';
+  const ratingCountStat = (ext.statistics || []).find((s) => s.statisticName === 'ratingcount');
+  const ratingCount = ratingCountStat != null ? String(Math.round(Number(ratingCountStat.value))) : '';
   const installStat = (ext.statistics || []).find((s) => s.statisticName === 'install');
   const installCount = installStat != null ? String(Math.round(Number(installStat.value))) : '';
   const publisherFlags = ext.publisher?.flags ?? '';
@@ -79,6 +83,7 @@ async function fetchOneExtension(extensionId) {
     lastVersion: currentVersion,
     lastVersionUpdateDate,
     rating,
+    ratingCount,
     installCount,
     publisherVerified,
   };
