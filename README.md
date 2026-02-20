@@ -19,20 +19,40 @@ npx wrangler pages dev public
 
 Open http://localhost:8788 (or the port Wrangler prints). The “Fetch details” button uses the `/api/fetch-extensions` function.
 
-## Deploy to Cloudflare Pages
+## Deploy to Cloudflare Pages (Git)
 
 For **Fetch details** to work, the `functions` directory must be deployed. Use Git-based deploy:
 
 1. Push this repo to GitHub/GitLab.
-2. In [Cloudflare Dashboard](https://dash.cloudflare.com) → Pages → Create project → Connect to Git.
-3. Set **Build output directory** to `public`. Leave build command empty.
-4. Deploy.
+2. In [Cloudflare Dashboard](https://dash.cloudflare.com) → Pages → your project → **Settings** → **Builds & deployments**.
+3. Set **Build configuration**:
+   - **Build output directory:** `public`
+   - **Build command** or **Deploy command** (whichever is required): use **`exit 0`**. That satisfies the mandatory field and exits successfully so Cloudflare deploys your `public` folder and `functions` without running wrangler (no API token needed).
+4. **Do not** use `npx wrangler pages deploy` as the deploy command — that requires an API token and causes authentication errors in the build.
+5. Save and redeploy (or push a commit).
 
 **CLI deploy** (uploads `public` only; for API use Git deploy):
 
 ```bash
-npm install -g wrangler
 npm run deploy
 ```
 
-Or directly: **`wrangler pages deploy`** (not `wrangler deploy` — that is for Workers).
+Or run the **Pages** deploy command (must include **`pages`**):
+
+```bash
+npx wrangler pages deploy public --project-name=check-vscode-extension
+```
+
+On Windows you can also run: `.\deploy.ps1`
+
+---
+
+**If you see:** *"Authentication error [code: 10000]"* when deploying via Git
+
+The deploy/build command is running `wrangler pages deploy`, which needs an API token. **Fix:** In Pages → Settings → Builds & deployments, set **Build output directory** to `public` and set the deploy (or build) command to **`exit 0`** instead of the wrangler command. Cloudflare will then deploy without running wrangler.
+
+---
+
+**If you see:** *"It looks like you've run a Workers-specific command in a Pages project"*
+
+You ran **`wrangler deploy`** (Workers). This repo is a **Pages** project. Use one of the commands above instead (e.g. **`npm run deploy`** or **`wrangler pages deploy ...`**).
