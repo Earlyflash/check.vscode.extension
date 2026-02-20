@@ -1,76 +1,78 @@
 # check.vscode.extension
 
-A small site for entering multiple VS Code extension names in `publisher.extension` format and fetching their details from the VS Code Marketplace. Hosted on [Cloudflare Pages](https://pages.cloudflare.com/).
+Web app to list VS Code extensions by ID (`publisher.extension`), fetch details from the Marketplace, and evaluate them against a configurable safety policy. Built for [Cloudflare Pages](https://pages.cloudflare.com/) with **Pages Functions** for the API.
 
-## UI
+## Features
 
-- **Extension names**: Enter one extension ID per line (e.g. `ms-python.python`, `esbenp.prettier-vscode`).
-- **Parsed list**: Shows each line as OK or Invalid format.
-- **Fetch details**: Calls the Marketplace API and shows publisher, extension name, current/last version, last version update date, and rating.
-- **Copy to Excel**: Results are shown as a table and as tab-separated text so you can paste into Excel or Google Sheets.
-- **Risk score**: Each extension is evaluated against a configurable safety policy; the table shows **Risk score**, **Decision** (ALLOW / REVIEW / BLOCK), and **Triggered rules**. Rows are highlighted for REVIEW (amber) and BLOCK (red).
+- Enter multiple extension IDs (one per line); validate format and fetch Marketplace data.
+- Table: publisher, extension name, version, last update date, rating, installs, risk score, decision (ALLOW/REVIEW/BLOCK), triggered rules, link to Marketplace.
+- Risk scoring from `public/extension-safety-policy.json`; breakdown when you select a row.
+- Copy-to-Excel: tab-separated output for the table.
 
-## Extension safety policy
+## Project structure (Cloudflare Pages + Functions)
 
-The app uses a **codified, machine-evaluable ruleset** to score extensions:
-
-- **Policy**: `public/extension-safety-policy.json` — weights (publisher, update, behaviour, supply chain, reputation), thresholds (review, block), and rule parameters.
-- **Evaluator**: Same logic runs in the browser (see `evaluateExtension` in `index.html`) and in Node for CI/ingestion in `evaluate-extension.js` (no external deps).
-
-Scoring uses only data available from the Marketplace API today (e.g. last update date, installs, rating). Behaviour/supply-chain rules (obfuscation, child process, repo transfer, etc.) are evaluated when metadata is provided (e.g. by a static analyser or scanner).
-
-**Run the evaluator locally (example):**
-
-```bash
-node evaluate-extension.js
+```
+├── public/                    # Static assets (build output)
+│   ├── index.html
+│   └── extension-safety-policy.json
+├── functions/                 # Pages Functions (serverless API)
+│   └── api/
+│       └── fetch-extensions.js   → POST /api/fetch-extensions
+├── wrangler.toml              # Pages config: name, pages_build_output_dir
+├── package.json
+└── evaluate-extension.js      # Standalone evaluator (Node/CI)
 ```
 
-Edit `evaluate-extension.js` to pass your own `metadata` and policy path, or `require('./evaluate-extension')` and call `evaluateExtension(metadata, policy)`.
+- **Static site**: `public/` is served as the site root. No build step.
+- **API**: `functions/api/fetch-extensions.js` handles `POST /api/fetch-extensions` and proxies the VS Code Marketplace API. The UI calls this for “Fetch details”.
+- **Deployment must include both** `public` and `functions` so the app works end-to-end.
 
 ## Local development
 
-From the project root (so that both `public` and `functions` are used):
+From the **project root** (so Wrangler sees both `public` and `functions`):
 
 ```bash
-npx wrangler pages dev public
+npm install
+npm run dev
 ```
 
-Open http://localhost:8788 (or the port Wrangler prints). The “Fetch details” button uses the `/api/fetch-extensions` function.
+Then open the URL Wrangler prints (e.g. `http://localhost:8788`). “Fetch details” uses the local Function.
 
-## Deploy to Cloudflare Pages (Git)
+## Deploy to Cloudflare Pages
 
-For **Fetch details** to work, the `functions` directory must be deployed. Use Git-based deploy:
+Use one of the following. In both cases the **project root** is the directory that contains `public/`, `functions/`, and `wrangler.toml`.
 
-1. Push this repo to GitHub/GitLab.
-2. In [Cloudflare Dashboard](https://dash.cloudflare.com) → Pages → your project → **Settings** → **Builds & deployments**.
-3. Set **Build configuration**:
-   - **Build output directory:** `public`
-   - **Build command** or **Deploy command** (whichever is required): use **`exit 0`**. That satisfies the mandatory field and exits successfully so Cloudflare deploys your `public` folder and `functions` without running wrangler (no API token needed).
-4. **Do not** use `npx wrangler pages deploy` as the deploy command — that requires an API token and causes authentication errors in the build.
-5. Save and redeploy (or push a commit).
+### Option 1: Git (recommended)
 
-**CLI deploy** (uploads `public` only; for API use Git deploy):
+1. Push this repo to GitHub or GitLab.
+2. In [Cloudflare Dashboard](https://dash.cloudflare.com) go to **Workers & Pages** → **Create** → **Pages** → **Connect to Git**. Select the repo.
+3. **Build settings**:
+   - **Project name**: any name (e.g. `check-vscode-extension`).
+   - **Production branch**: e.g. `main`.
+   - **Root directory**: leave blank (use repo root).
+   - **Build command**: `exit 0` (no build; required if the field is mandatory).
+   - **Build output directory**: `public`.
+4. **Save** and deploy. Cloudflare will serve `public/` as the site and deploy `functions/` from the repo root as Pages Functions.
+
+Do **not** set a custom deploy command that runs `wrangler pages deploy` in the Git build; the built-in Git deployment already deploys both static assets and Functions. Using `wrangler` in the build requires an API token and can cause authentication errors.
+
+### Option 2: Wrangler CLI (direct upload)
+
+From the **project root** (directory that contains `public/`, `functions/`, and `wrangler.toml`):
 
 ```bash
-npm run deploy
-```
-
-Or run the **Pages** deploy command (must include **`pages`**):
-
-```bash
+npm install
 npx wrangler pages deploy public --project-name=check-vscode-extension
 ```
 
-On Windows you can also run: `.\deploy.ps1`
+You will be prompted to log in if needed. This uploads the contents of `public/` as the static site and deploys the `functions/` in the same project (Wrangler uses the current directory as the project context). The project name must match an existing Pages project or one will be created.
 
----
+**Note:** Use `wrangler pages deploy`, not `wrangler deploy`. This is a Pages project; `wrangler deploy` is for Workers.
 
-**If you see:** *"Authentication error [code: 10000]"* when deploying via Git
+## Extension safety policy
 
-The deploy/build command is running `wrangler pages deploy`, which needs an API token. **Fix:** In Pages → Settings → Builds & deployments, set **Build output directory** to `public` and set the deploy (or build) command to **`exit 0`** instead of the wrangler command. Cloudflare will then deploy without running wrangler.
+- **Policy file**: `public/extension-safety-policy.json` (weights, thresholds, rules).
+- **Browser**: The same evaluation logic runs in the UI (see `evaluateExtension` in `index.html`).
+- **Node/CI**: `evaluate-extension.js` exports `evaluateExtension(metadata, policy)`; no dependencies. Example: `node evaluate-extension.js`.
 
----
-
-**If you see:** *"It looks like you've run a Workers-specific command in a Pages project"*
-
-You ran **`wrangler deploy`** (Workers). This repo is a **Pages** project. Use one of the commands above instead (e.g. **`npm run deploy`** or **`wrangler pages deploy ...`**).
+Scoring uses Marketplace data (update date, installs, rating) plus optional metadata (behaviour, supply chain) when provided.
