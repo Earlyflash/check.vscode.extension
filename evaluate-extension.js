@@ -33,6 +33,13 @@ function evaluateExtension(metadata, policy) {
     score += policy.weights.update / 2;
     triggered.push('Recent update risk window');
   }
+  if (
+    metadata.dormantMonths !== undefined &&
+    metadata.dormantMonths >= (policy.rules.update.flagIfDormantMonths ?? 12)
+  ) {
+    score += policy.weights.update;
+    triggered.push('No update in 12+ months');
+  }
   if (metadata.majorVersionJumpAfterDormancy) {
     score += policy.weights.update;
     triggered.push('Major jump after dormancy');

@@ -8,8 +8,8 @@
     "reputation": 10
   },
   "thresholds": {
-    "review": 31,
-    "block": 61
+    "review": 20,
+    "block": 45
   },
   "rules": {
     "publisher": {

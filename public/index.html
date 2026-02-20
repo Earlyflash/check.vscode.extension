@@ -38,7 +38,7 @@
 
     main {
       width: 100%;
-      max-width: 720px;
+      max-width: min(1400px, 98vw);
     }
 
     h1 {
@@ -474,6 +474,12 @@
       ) {
         add(policy.weights.update / 2, 'Recent update risk window');
       }
+      if (
+        metadata.dormantMonths !== undefined &&
+        metadata.dormantMonths >= (policy.rules.update.flagIfDormantMonths ?? 12)
+      ) {
+        add(policy.weights.update, 'No update in 12+ months');
+      }
       if (metadata.majorVersionJumpAfterDormancy) {
         add(policy.weights.update, 'Major jump after dormancy');
       }
@@ -691,10 +697,12 @@
             const installsNum = r.installCount ? parseInt(r.installCount, 10) : undefined;
             const ratingNum = r.rating ? parseFloat(r.rating) : undefined;
             let lastUpdatedDaysAgo;
+            let dormantMonths;
             if (r.lastVersionUpdateDate) {
               const d = new Date(r.lastVersionUpdateDate);
               if (!isNaN(d.getTime())) {
                 lastUpdatedDaysAgo = Math.floor((Date.now() - d.getTime()) / (24 * 60 * 60 * 1000));
+                dormantMonths = Math.floor(lastUpdatedDaysAgo / 30.44);
               }
             }
             return {
@@ -714,6 +722,7 @@
               _metadata: {
                 publisherVerified: r.publisherVerified === true,
                 lastUpdatedDaysAgo,
+                dormantMonths,
                 installs: installsNum,
                 rating: ratingNum,
                 hasPublicRepo: undefined,
