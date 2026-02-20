@@ -1,0 +1,96 @@
+const MARKETPLACE_URL =
+  'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery?api-version=3.0-preview.1';
+
+/**
+ * Query VS Code Marketplace for one extension (publisher.extension).
+ * Returns normalized row: publisher, extensionName, currentVersion, lastVersion, lastVersionUpdateDate, rating.
+ */
+async function fetchOneExtension(extensionId) {
+  const body = {
+    filters: [
+      {
+        criteria: [{ filterType: 7, value: extensionId }],
+        pageSize: 1,
+        pageNumber: 1,
+      },
+    ],
+    flags: 256, // IncludeStatistics
+  };
+
+  const res = await fetch(MARKETPLACE_URL, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json;api-version=3.0-preview.1',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    return {
+      extensionId,
+      error: `HTTP ${res.status}`,
+      publisher: '',
+      extensionName: '',
+      currentVersion: '',
+      lastVersion: '',
+      lastVersionUpdateDate: '',
+      rating: '',
+    };
+  }
+
+  const data = await res.json();
+  const exts = data?.results?.[0]?.extensions;
+  if (!exts || exts.length === 0) {
+    return {
+      extensionId,
+      error: 'Not found',
+      publisher: '',
+      extensionName: '',
+      currentVersion: '',
+      lastVersion: '',
+      lastVersionUpdateDate: '',
+      rating: '',
+    };
+  }
+
+  const ext = exts[0];
+  const versions = ext.versions || [];
+  const latest = versions[0];
+  const currentVersion = latest?.version ?? '';
+  const lastVersionUpdateDate = latest?.lastUpdated ?? ext.lastUpdated ?? '';
+
+  const stat = (ext.statistics || []).find((s) => s.statisticName === 'averagerating');
+  const rating = stat != null ? String(Number(stat.value).toFixed(2)) : '';
+
+  return {
+    extensionId,
+    error: '',
+    publisher: ext.publisher?.publisherName ?? '',
+    extensionName: ext.extensionName ?? '',
+    currentVersion,
+    lastVersion: currentVersion,
+    lastVersionUpdateDate: lastVersionUpdateDate ? new Date(lastVersionUpdateDate).toISOString().slice(0, 10) : '',
+    rating,
+  };
+}
+
+export async function onRequestPost(context) {
+  let extensions;
+  try {
+    const body = await context.request.json();
+    extensions = body?.extensions;
+    if (!Array.isArray(extensions) || extensions.length === 0) {
+      return Response.json({ error: 'Missing or empty "extensions" array' }, { status: 400 });
+    }
+    extensions = extensions.map((s) => String(s).trim()).filter(Boolean);
+    if (extensions.length === 0) {
+      return Response.json({ error: 'No extension IDs provided' }, { status: 400 });
+    }
+  } catch {
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const results = await Promise.all(extensions.map((id) => fetchOneExtension(id)));
+  return Response.json({ results });
+}

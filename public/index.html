@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VS Code Extension Checker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f12;
+      --surface: #18181c;
+      --border: #2a2a30;
+      --text: #e4e4e7;
+      --muted: #71717a;
+      --accent: #a78bfa;
+      --accent-dim: #7c3aed;
+      --valid: #34d399;
+      --invalid: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Outfit', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    main {
+      width: 100%;
+      max-width: 720px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      padding: 1rem 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+
+    .actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-dim);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--border);
+    }
+
+    .parsed-section {
+      margin-top: 1.5rem;
+    }
+
+    .parsed-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.5rem 0 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .parsed-list li {
+      padding: 0.6rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .parsed-list li:last-child {
+      border-bottom: none;
+    }
+
+    .parsed-list .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .parsed-list .badge.valid {
+      background: rgba(52, 211, 153, 0.2);
+      color: var(--valid);
+    }
+
+    .parsed-list .badge.invalid {
+      background: rgba(248, 113, 113, 0.2);
+      color: var(--invalid);
+    }
+
+    .summary {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.75rem;
+    }
+
+    .summary strong {
+      color: var(--text);
+    }
+
+    .results-section {
+      margin-top: 2rem;
+    }
+
+    .results-section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-top: 0.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    th {
+      font-weight: 500;
+      color: var(--muted);
+      background: var(--surface);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    td.error-cell {
+      color: var(--invalid);
+    }
+
+    .copy-area {
+      margin-top: 1rem;
+    }
+
+    .copy-area label {
+      margin-bottom: 0.25rem;
+    }
+
+    .copy-area .hint {
+      margin-bottom: 0.5rem;
+    }
+
+    .tsv-block {
+      width: 100%;
+      min-height: 120px;
+      padding: 0.75rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      resize: vertical;
+      margin-top: 0.25rem;
+    }
+
+    .status {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .status.loading {
+      color: var(--accent);
+    }
+
+    .status.error {
+      color: var(--invalid);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>VS Code Extension Checker</h1>
+    <p class="subtitle">Enter extension IDs in <code>publisher.extension</code> format</p>
+
+    <label for="extensions">Extension names</label>
+    <textarea
+      id="extensions"
+      name="extensions"
+      placeholder="ms-python.python&#10;ms-vscode.vscode-typescript-next&#10;esbenp.prettier-vscode"
+      autofocus
+    ></textarea>
+    <p class="hint">One per line. Example: <code>ms-python.python</code></p>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" id="fetch-btn" disabled>Fetch details</button>
+      <span class="status" id="status"></span>
+    </div>
+
+    <section class="parsed-section" id="parsed-section" aria-live="polite">
+      <label>Parsed extensions</label>
+      <ul class="parsed-list" id="parsed-list"></ul>
+      <p class="summary" id="summary"></p>
+    </section>
+
+    <section class="results-section" id="results-section" hidden>
+      <h2>Marketplace details</h2>
+      <div class="table-wrap">
+        <table id="results-table">
+          <thead>
+            <tr>
+              <th>Publisher</th>
+              <th>Extension name</th>
+              <th>Current version</th>
+              <th>Last version</th>
+              <th>Last version update date</th>
+              <th>Rating</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+      <div class="copy-area">
+        <label for="tsv-block">Copy to Excel (tab-separated)</label>
+        <p class="hint">Select all and copy, or use the button below. Paste into Excel or Google Sheets.</p>
+        <textarea class="tsv-block" id="tsv-block" readonly></textarea>
+        <div class="actions" style="margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" id="copy-btn">Copy to clipboard</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const EXTENSION_REGEX = /^([a-z0-9][a-z0-9-]*[a-z0-9]|[a-z0-9])\.([a-z0-9][a-z0-9-]*[a-z0-9]|[a-z0-9])$/i;
+
+    function parseExtensionId(raw) {
+      const s = raw.trim();
+      if (!s) return null;
+      const ok = EXTENSION_REGEX.test(s);
+      return { raw: s, valid: ok };
+    }
+
+    function parseInput(value) {
+      const lines = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      return lines.map(parseExtensionId).filter((x) => x !== null);
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function setStatus(msg, type = '') {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function renderParsed(entries) {
+      const listEl = document.getElementById('parsed-list');
+      const summaryEl = document.getElementById('summary');
+      const sectionEl = document.getElementById('parsed-section');
+      const fetchBtn = document.getElementById('fetch-btn');
+
+      if (entries.length === 0) {
+        listEl.innerHTML = '';
+        summaryEl.textContent = '';
+        sectionEl.hidden = true;
+        fetchBtn.disabled = true;
+        return;
+      }
+
+      sectionEl.hidden = false;
+      const validCount = entries.filter((e) => e.valid).length;
+      fetchBtn.disabled = validCount === 0;
+
+      listEl.innerHTML = entries
+        .map(
+          (e) =>
+            `<li><span class="badge ${e.valid ? 'valid' : 'invalid'}">${e.valid ? 'OK' : 'Invalid'}</span><span>${escapeHtml(e.raw)}</span></li>`
+        )
+        .join('');
+
+      const parts = [];
+      if (validCount) parts.push(`<strong>${validCount}</strong> valid`);
+      if (entries.length - validCount) parts.push(`<strong>${entries.length - validCount}</strong> invalid format`);
+      summaryEl.innerHTML = parts.join(' · ') || '';
+    }
+
+    function tsvEscape(cell) {
+      const s = String(cell ?? '');
+      if (s.includes('\t') || s.includes('\r') || s.includes('\n') || s.includes('"')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+
+    function buildTsv(rows) {
+      const header = ['Publisher', 'Extension name', 'Current version', 'Last version', 'Last version update date', 'Rating', 'Error'];
+      const lines = [header.join('\t')];
+      for (const r of rows) {
+        lines.push(
+          [
+            tsvEscape(r.publisher),
+            tsvEscape(r.extensionName),
+            tsvEscape(r.currentVersion),
+            tsvEscape(r.lastVersion),
+            tsvEscape(r.lastVersionUpdateDate),
+            tsvEscape(r.rating),
+            tsvEscape(r.error),
+          ].join('\t')
+        );
+      }
+      return lines.join('\r\n');
+    }
+
+    function renderResults(rows) {
+      const section = document.getElementById('results-section');
+      const tbody = document.getElementById('results-body');
+      const tsvBlock = document.getElementById('tsv-block');
+
+      if (!rows.length) {
+        section.hidden = true;
+        return;
+      }
+
+      section.hidden = false;
+      tbody.innerHTML = rows
+        .map(
+          (r) =>
+            `<tr>
+              <td>${escapeHtml(r.publisher)}</td>
+              <td>${escapeHtml(r.extensionName)}</td>
+              <td>${escapeHtml(r.currentVersion)}</td>
+              <td>${escapeHtml(r.lastVersion)}</td>
+              <td>${escapeHtml(r.lastVersionUpdateDate)}</td>
+              <td>${escapeHtml(r.rating)}</td>
+              <td class="${r.error ? 'error-cell' : ''}">${escapeHtml(r.error)}</td>
+            </tr>`
+        )
+        .join('');
+
+      tsvBlock.value = buildTsv(rows);
+    }
+
+    async function fetchDetails() {
+      const entries = parseInput(document.getElementById('extensions').value);
+      const validIds = entries.filter((e) => e.valid).map((e) => e.raw);
+      if (validIds.length === 0) return;
+
+      setStatus('Fetching…', 'loading');
+      document.getElementById('fetch-btn').disabled = true;
+
+      try {
+        const res = await fetch('/api/fetch-extensions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ extensions: validIds }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus(data?.error || `Error ${res.status}`, 'error');
+          document.getElementById('fetch-btn').disabled = false;
+          return;
+        }
+
+        const results = data.results || [];
+        const byId = new Map(results.map((r) => [r.extensionId, r]));
+        const rows = entries
+          .filter((e) => e.valid)
+          .map((e) => {
+            const r = byId.get(e.raw);
+            if (!r)
+              return {
+                publisher: '',
+                extensionName: e.raw,
+                currentVersion: '',
+                lastVersion: '',
+                lastVersionUpdateDate: '',
+                rating: '',
+                error: 'No data',
+              };
+            return {
+              publisher: r.publisher,
+              extensionName: r.extensionName,
+              currentVersion: r.currentVersion,
+              lastVersion: r.lastVersion,
+              lastVersionUpdateDate: r.lastVersionUpdateDate,
+              rating: r.rating,
+              error: r.error || '',
+            };
+          });
+        renderResults(rows);
+        setStatus('');
+      } catch (err) {
+        setStatus(err.message || 'Request failed', 'error');
+      }
+      document.getElementById('fetch-btn').disabled = false;
+    }
+
+    function copyTsv() {
+      const tsv = document.getElementById('tsv-block');
+      tsv.select();
+      tsv.setSelectionRange(0, 99999);
+      try {
+        navigator.clipboard.writeText(tsv.value);
+        setStatus('Copied to clipboard');
+        setTimeout(() => setStatus(''), 2000);
+      } catch {
+        setStatus('Copy failed', 'error');
+      }
+    }
+
+    const textarea = document.getElementById('extensions');
+    function update() {
+      renderParsed(parseInput(textarea.value));
+    }
+
+    textarea.addEventListener('input', update);
+    textarea.addEventListener('paste', () => setTimeout(update, 0));
+    document.getElementById('fetch-btn').addEventListener('click', fetchDetails);
+    document.getElementById('copy-btn').addEventListener('click', copyTsv);
+    update();
+  </script>
+</body>
+</html>
