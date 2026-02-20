@@ -58,7 +58,10 @@ async function fetchOneExtension(extensionId) {
   const versions = ext.versions || [];
   const latest = versions[0];
   const currentVersion = latest?.version ?? '';
-  const lastVersionUpdateDate = latest?.lastUpdated ?? ext.lastUpdated ?? '';
+  const lastVersionUpdateDateRaw = latest?.lastUpdated ?? ext.lastUpdated ?? '';
+  const lastVersionUpdateDate = lastVersionUpdateDateRaw
+    ? new Date(lastVersionUpdateDateRaw).toISOString().slice(0, 10)
+    : '';
 
   const stat = (ext.statistics || []).find((s) => s.statisticName === 'averagerating');
   const rating = stat != null ? String(Number(stat.value).toFixed(2)) : '';
@@ -70,7 +73,7 @@ async function fetchOneExtension(extensionId) {
     extensionName: ext.extensionName ?? '',
     currentVersion,
     lastVersion: currentVersion,
-    lastVersionUpdateDate: lastVersionUpdateDate ? new Date(lastVersionUpdateDate).toISOString().slice(0, 10) : '',
+    lastVersionUpdateDate,
     rating,
   };
 }
