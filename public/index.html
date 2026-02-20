@@ -285,6 +285,26 @@
 
     tr.risk-block td { background: rgba(248, 113, 113, 0.12); }
     tr.risk-review td { background: rgba(251, 191, 36, 0.12); }
+    tr.selected td { background: rgba(167, 139, 250, 0.15); outline: 1px solid var(--accent); }
+
+    .risk-breakdown-box {
+      margin-top: 1rem;
+    }
+    .risk-breakdown-box label { display: block; margin-bottom: 0.25rem; }
+    .risk-breakdown-box .breakdown-text {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      resize: vertical;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -335,6 +355,10 @@
           </thead>
           <tbody id="results-body"></tbody>
         </table>
+      </div>
+      <div class="risk-breakdown-box">
+        <label for="risk-breakdown-text">Risk score breakdown</label>
+        <textarea id="risk-breakdown-text" class="breakdown-text" readonly placeholder="Click a row in the table above to see decision, score breakdown and triggered rules for that extension."></textarea>
       </div>
       <div class="copy-area">
         <label for="tsv-block">Copy to Excel (tab-separated)</label>
@@ -418,94 +442,88 @@
     /**
      * Extension safety evaluation (matches extension-safety-policy.json rules).
      * Metadata can be partial; missing fields are treated as safe.
+     * Returns score, decision, triggeredRules, and triggeredWithPoints for tooltip breakdown.
      */
     function evaluateExtension(metadata, policy) {
       let score = 0;
       const triggered = [];
+      const triggeredWithPoints = [];
+
+      function add(points, rule) {
+        score += points;
+        triggered.push(rule);
+        triggeredWithPoints.push({ rule, points });
+      }
 
       if (
         metadata.publisherChangedDaysAgo !== undefined &&
         metadata.publisherChangedDaysAgo < (policy.rules.publisher.blockIfPublisherChangedDays || 90)
       ) {
-        score += policy.weights.publisher;
-        triggered.push('Publisher changed recently');
+        add(policy.weights.publisher, 'Publisher changed recently');
       }
       if (
         metadata.dormantMonths !== undefined &&
         metadata.dormantMonths > (policy.rules.publisher.blockIfDormantMonths || 24)
       ) {
-        score += policy.weights.publisher;
-        triggered.push('Long dormancy detected');
+        add(policy.weights.publisher, 'Long dormancy detected');
       }
 
       if (
         metadata.lastUpdatedDaysAgo !== undefined &&
         metadata.lastUpdatedDaysAgo < (policy.rules.update.highRiskRecentUpdateDays || 7)
       ) {
-        score += policy.weights.update / 2;
-        triggered.push('Recent update risk window');
+        add(policy.weights.update / 2, 'Recent update risk window');
       }
       if (metadata.majorVersionJumpAfterDormancy) {
-        score += policy.weights.update;
-        triggered.push('Major jump after dormancy');
+        add(policy.weights.update, 'Major jump after dormancy');
       }
 
       if (
         metadata.installs !== undefined &&
         metadata.installs < (policy.rules.reputation.minInstalls || 1000)
       ) {
-        score += policy.weights.reputation / 2;
-        triggered.push('Low install count');
+        add(policy.weights.reputation / 2, 'Low install count');
       }
       if (
         metadata.rating !== undefined &&
         metadata.rating < (policy.rules.reputation.minRating || 3)
       ) {
-        score += policy.weights.reputation / 2;
-        triggered.push('Low rating');
+        add(policy.weights.reputation / 2, 'Low rating');
       }
 
       if (metadata.isObfuscated) {
-        score += policy.weights.behaviour;
-        triggered.push('Obfuscated code');
+        add(policy.weights.behaviour, 'Obfuscated code');
       }
       if (metadata.usesChildProcess) {
-        score += policy.weights.behaviour / 3;
-        triggered.push('Uses child_process');
+        add(policy.weights.behaviour / 3, 'Uses child_process');
       }
       if (metadata.usesEval) {
-        score += policy.weights.behaviour / 3;
-        triggered.push('Uses eval');
+        add(policy.weights.behaviour / 3, 'Uses eval');
       }
       if (metadata.hasHardcodedIP) {
-        score += policy.weights.behaviour / 3;
-        triggered.push('Hard coded IP');
+        add(policy.weights.behaviour / 3, 'Hard coded IP');
       }
       if (metadata.downloadsRemoteCode) {
-        score += policy.weights.behaviour;
-        triggered.push('Downloads remote code');
+        add(policy.weights.behaviour, 'Downloads remote code');
       }
 
       if (
         policy.rules.supplyChain.requirePublicRepo &&
         metadata.hasPublicRepo === false
       ) {
-        score += policy.weights.supplyChain;
-        triggered.push('No public repository');
+        add(policy.weights.supplyChain, 'No public repository');
       }
       if (
         metadata.repoTransferredDaysAgo !== undefined &&
         metadata.repoTransferredDaysAgo < (policy.rules.supplyChain.flagIfRepoTransferredRecentlyDays || 90)
       ) {
-        score += policy.weights.supplyChain / 2;
-        triggered.push('Recent repo transfer');
+        add(policy.weights.supplyChain / 2, 'Recent repo transfer');
       }
       if (
         metadata.newMaintainerDaysAgo !== undefined &&
         metadata.newMaintainerDaysAgo < (policy.rules.supplyChain.flagIfNewMaintainerDays || 60)
       ) {
-        score += policy.weights.supplyChain / 2;
-        triggered.push('New maintainer recently added');
+        add(policy.weights.supplyChain / 2, 'New maintainer recently added');
       }
 
       const block = policy.thresholds.block ?? 61;
@@ -514,7 +532,25 @@
       if (score >= block) decision = 'BLOCK';
       else if (score >= review) decision = 'REVIEW';
 
-      return { score, decision, triggeredRules: triggered };
+      return { score, decision, triggeredRules: triggered, triggeredWithPoints };
+    }
+
+    function buildRiskBreakdownText(r) {
+      if (r.riskScore == null || r.riskScore === '') return '';
+      const parts = [];
+      parts.push('Extension: ' + (r.extensionId || r.publisher + '.' + r.extensionName));
+      parts.push('Decision: ' + (r.riskDecision ?? '—'));
+      if (Array.isArray(r.riskBreakdown) && r.riskBreakdown.length) {
+        parts.push('Score breakdown:');
+        r.riskBreakdown.forEach(({ rule, points }) => {
+          parts.push('  • ' + rule + ': +' + points);
+        });
+      }
+      parts.push('Total: ' + r.riskScore);
+      if (Array.isArray(r.triggeredRules) && r.triggeredRules.length) {
+        parts.push('Triggered rules: ' + r.triggeredRules.join(', '));
+      }
+      return parts.join('\n');
     }
 
     function buildTsv(rows) {
@@ -542,27 +578,35 @@
       return lines.join('\r\n');
     }
 
+    let currentResultRows = [];
+
     function renderResults(rows) {
       const section = document.getElementById('results-section');
       const tbody = document.getElementById('results-body');
       const tsvBlock = document.getElementById('tsv-block');
+      const breakdownText = document.getElementById('risk-breakdown-text');
 
       if (!rows.length) {
         section.hidden = true;
+        currentResultRows = [];
         return;
       }
 
+      currentResultRows = rows;
       section.hidden = false;
+      breakdownText.value = '';
+
       tbody.innerHTML = rows
         .map(
-          (r) => {
+          (r, idx) => {
             const link = r.extensionId ? MARKETPLACE_ITEM_URL + encodeURIComponent(r.extensionId) : '';
             const linkCell = link
               ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open</a>`
               : '';
             const decisionClass = r.riskDecision === 'BLOCK' ? 'risk-block' : r.riskDecision === 'REVIEW' ? 'risk-review' : '';
             const triggeredText = Array.isArray(r.triggeredRules) && r.triggeredRules.length ? r.triggeredRules.join(', ') : '—';
-            return `<tr class="${decisionClass}">
+            const riskScoreVal = r.riskScore ?? '—';
+            return `<tr class="${decisionClass}" data-row-index="${idx}">
               <td>${escapeHtml(r.publisher)}</td>
               <td>${escapeHtml(r.extensionName)}</td>
               <td>${escapeHtml(r.currentVersion || '—')}</td>
@@ -570,7 +614,7 @@
               <td>${escapeHtml(r.lastVersionUpdateDate)}</td>
               <td>${escapeHtml(r.rating)}</td>
               <td>${escapeHtml(r.installCount || '—')}</td>
-              <td>${escapeHtml(r.riskScore ?? '—')}</td>
+              <td>${escapeHtml(String(riskScoreVal))}</td>
               <td>${escapeHtml(r.riskDecision ?? '—')}</td>
               <td title="${escapeHtml(triggeredText)}">${escapeHtml(triggeredText.length > 60 ? triggeredText.slice(0, 57) + '…' : triggeredText)}</td>
               <td>${linkCell}</td>
@@ -582,6 +626,18 @@
 
       tsvBlock.value = buildTsv(rows);
     }
+
+    document.getElementById('results-body').addEventListener('click', (ev) => {
+      const tbody = ev.currentTarget;
+      const tr = ev.target.closest('tr');
+      if (!tr || !tbody.contains(tr)) return;
+      const idx = parseInt(tr.getAttribute('data-row-index'), 10);
+      if (isNaN(idx) || idx < 0 || idx >= currentResultRows.length) return;
+      tbody.querySelectorAll('tr.selected').forEach((row) => row.classList.remove('selected'));
+      tr.classList.add('selected');
+      const row = currentResultRows[idx];
+      document.getElementById('risk-breakdown-text').value = buildRiskBreakdownText(row);
+    });
 
     async function fetchDetails() {
       const entries = parseInput(document.getElementById('extensions').value);
@@ -683,6 +739,7 @@
             row.riskScore = result.score;
             row.riskDecision = result.decision;
             row.triggeredRules = result.triggeredRules;
+            row.riskBreakdown = result.triggeredWithPoints || [];
             delete row._metadata;
           });
         } else {
@@ -691,6 +748,7 @@
             if (row.riskScore === undefined) row.riskScore = '—';
             if (row.riskDecision === undefined) row.riskDecision = '—';
             if (row.triggeredRules === undefined) row.triggeredRules = [];
+            if (row.riskBreakdown === undefined) row.riskBreakdown = [];
           });
         }
         renderResults(rows);
