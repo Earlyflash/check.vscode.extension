@@ -1,2 +1,7 @@
-name = "checkvscodeextension"
-pages_build_output_dir = "public"
+name = "everyminute"
+main = "worker.js"
+compatibility_date = "2025-02-20"
+
+[assets]
+directory = "./public/"
+not_found_handling = "single-page-application"

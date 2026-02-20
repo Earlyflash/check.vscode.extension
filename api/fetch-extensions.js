@@ -1,10 +1,6 @@
 const MARKETPLACE_URL =
   'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery?api-version=3.0-preview.1';
 
-/**
- * Query VS Code Marketplace for one extension (publisher.extension).
- * Returns normalized row: publisher, extensionName, currentVersion, lastVersion, lastVersionUpdateDate, rating.
- */
 async function fetchOneExtension(extensionId) {
   const body = {
     filters: [
@@ -14,7 +10,7 @@ async function fetchOneExtension(extensionId) {
         pageNumber: 1,
       },
     ],
-    flags: 258, // IncludeStatistics (256) + IncludeFiles (2; versions included)
+    flags: 258,
   };
 
   const res = await fetch(MARKETPLACE_URL, {
@@ -88,10 +84,10 @@ async function fetchOneExtension(extensionId) {
   };
 }
 
-export async function onRequestPost(context) {
+export async function handleFetchExtensions(request) {
   let extensions;
   try {
-    const body = await context.request.json();
+    const body = await request.json();
     extensions = body?.extensions;
     if (!Array.isArray(extensions) || extensions.length === 0) {
       return Response.json({ error: 'Missing or empty "extensions" array' }, { status: 400 });
