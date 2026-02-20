@@ -14,7 +14,7 @@ async function fetchOneExtension(extensionId) {
         pageNumber: 1,
       },
     ],
-    flags: 256, // IncludeStatistics
+    flags: 258, // IncludeStatistics (256) + IncludeFiles (2; versions included)
   };
 
   const res = await fetch(MARKETPLACE_URL, {
@@ -36,6 +36,7 @@ async function fetchOneExtension(extensionId) {
       lastVersion: '',
       lastVersionUpdateDate: '',
       rating: '',
+      installCount: '',
     };
   }
 
@@ -51,6 +52,7 @@ async function fetchOneExtension(extensionId) {
       lastVersion: '',
       lastVersionUpdateDate: '',
       rating: '',
+      installCount: '',
     };
   }
 
@@ -65,6 +67,8 @@ async function fetchOneExtension(extensionId) {
 
   const stat = (ext.statistics || []).find((s) => s.statisticName === 'averagerating');
   const rating = stat != null ? String(Number(stat.value).toFixed(2)) : '';
+  const installStat = (ext.statistics || []).find((s) => s.statisticName === 'install');
+  const installCount = installStat != null ? String(Math.round(Number(installStat.value))) : '';
 
   return {
     extensionId,
@@ -75,6 +79,7 @@ async function fetchOneExtension(extensionId) {
     lastVersion: currentVersion,
     lastVersionUpdateDate,
     rating,
+    installCount,
   };
 }
 

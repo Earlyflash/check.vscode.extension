@@ -273,6 +273,15 @@
     .status.error {
       color: var(--invalid);
     }
+
+    .table-wrap a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .table-wrap a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -302,6 +311,7 @@
 
     <section class="results-section" id="results-section" hidden>
       <h2>Marketplace details</h2>
+      <p class="hint" style="margin-top: 0;"><strong>Error</strong> column: per-extension problems only (e.g. Not found, HTTP errors). Empty = no error for that extension. Request-level errors appear in the status message above.</p>
       <div class="table-wrap">
         <table id="results-table">
           <thead>
@@ -312,6 +322,8 @@
               <th>Last version</th>
               <th>Last version update date</th>
               <th>Rating</th>
+              <th>Installs</th>
+              <th>Link</th>
               <th>Error</th>
             </tr>
           </thead>
@@ -395,10 +407,13 @@
       return s;
     }
 
+    const MARKETPLACE_ITEM_URL = 'https://marketplace.visualstudio.com/items?itemName=';
+
     function buildTsv(rows) {
-      const header = ['Publisher', 'Extension name', 'Current version', 'Last version', 'Last version update date', 'Rating', 'Error'];
+      const header = ['Publisher', 'Extension name', 'Current version', 'Last version', 'Last version update date', 'Rating', 'Installs', 'Link', 'Error'];
       const lines = [header.join('\t')];
       for (const r of rows) {
+        const link = r.extensionId ? MARKETPLACE_ITEM_URL + r.extensionId : '';
         lines.push(
           [
             tsvEscape(r.publisher),
@@ -407,6 +422,8 @@
             tsvEscape(r.lastVersion),
             tsvEscape(r.lastVersionUpdateDate),
             tsvEscape(r.rating),
+            tsvEscape(r.installCount),
+            tsvEscape(link),
             tsvEscape(r.error),
           ].join('\t')
         );
@@ -427,16 +444,23 @@
       section.hidden = false;
       tbody.innerHTML = rows
         .map(
-          (r) =>
-            `<tr>
+          (r) => {
+            const link = r.extensionId ? MARKETPLACE_ITEM_URL + encodeURIComponent(r.extensionId) : '';
+            const linkCell = link
+              ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open</a>`
+              : '';
+            return `<tr>
               <td>${escapeHtml(r.publisher)}</td>
               <td>${escapeHtml(r.extensionName)}</td>
-              <td>${escapeHtml(r.currentVersion)}</td>
-              <td>${escapeHtml(r.lastVersion)}</td>
+              <td>${escapeHtml(r.currentVersion || '—')}</td>
+              <td>${escapeHtml(r.lastVersion || '—')}</td>
               <td>${escapeHtml(r.lastVersionUpdateDate)}</td>
               <td>${escapeHtml(r.rating)}</td>
+              <td>${escapeHtml(r.installCount || '—')}</td>
+              <td>${linkCell}</td>
               <td class="${r.error ? 'error-cell' : ''}">${escapeHtml(r.error)}</td>
-            </tr>`
+            </tr>`;
+          }
         )
         .join('');
 
@@ -460,12 +484,18 @@
         const data = await res.json();
 
         if (!res.ok) {
-          setStatus(data?.error || `Error ${res.status}`, 'error');
+          const msg = data?.error || `Error ${res.status}`;
+          setStatus(msg, 'error');
+          console.error('[Extension Checker] API error:', res.status, msg, data);
           document.getElementById('fetch-btn').disabled = false;
           return;
         }
 
         const results = data.results || [];
+        const withErrors = results.filter((r) => r.error);
+        if (withErrors.length) {
+          console.error('[Extension Checker] Per-extension errors:', withErrors);
+        }
         const byId = new Map(results.map((r) => [r.extensionId, r]));
         const rows = entries
           .filter((e) => e.valid)
@@ -473,21 +503,25 @@
             const r = byId.get(e.raw);
             if (!r)
               return {
+                extensionId: e.raw,
                 publisher: '',
                 extensionName: e.raw,
                 currentVersion: '',
                 lastVersion: '',
                 lastVersionUpdateDate: '',
                 rating: '',
+                installCount: '',
                 error: 'No data',
               };
             return {
+              extensionId: r.extensionId,
               publisher: r.publisher,
               extensionName: r.extensionName,
-              currentVersion: r.currentVersion,
-              lastVersion: r.lastVersion,
+              currentVersion: r.currentVersion || '',
+              lastVersion: r.lastVersion || r.currentVersion || '',
               lastVersionUpdateDate: r.lastVersionUpdateDate,
               rating: r.rating,
+              installCount: r.installCount ?? '',
               error: r.error || '',
             };
           });
@@ -495,6 +529,7 @@
         setStatus('');
       } catch (err) {
         setStatus(err.message || 'Request failed', 'error');
+        console.error('[Extension Checker] Request failed:', err);
       }
       document.getElementById('fetch-btn').disabled = false;
     }
