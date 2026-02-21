@@ -37,18 +37,7 @@ function getRepositoryUrlFromVersion(version) {
  * Supports: "repository": "url", "repository": { "type": "git", "url": "..." }, "repository": "github:owner/repo".
  * Tries version.assetUri first, then gallery publisher/extension assetbyname URL.
  */
-async function getRepositoryUrlFromManifest(version, ext) {
-  let manifestUrl = null;
-  const base = version?.fallbackAssetUri || version?.assetUri;
-  if (base && typeof base === 'string') {
-    manifestUrl = `${base.replace(/\/$/, '')}/${ASSET_TYPE_MANIFEST}`;
-  } else if (ext?.publisher?.publisherName && ext?.extensionName && version?.version) {
-    const publisher = encodeURIComponent(ext.publisher.publisherName.toLowerCase());
-    const extensionName = encodeURIComponent(ext.extensionName.toLowerCase());
-    const ver = encodeURIComponent(version.version);
-    manifestUrl = `https://${ext.publisher.publisherName.toLowerCase()}.gallery.vsassets.io/_apis/public/gallery/publisher/${publisher}/extension/${extensionName}/${ver}/assetbyname/${ASSET_TYPE_MANIFEST}`;
-  }
-  if (!manifestUrl) return null;
+async function fetchManifestAndGetRepo(manifestUrl) {
   try {
     const res = await fetch(manifestUrl, {
       headers: { Accept: 'application/json' },
@@ -71,6 +60,26 @@ async function getRepositoryUrlFromManifest(version, ext) {
   } catch {
     return null;
   }
+}
+
+async function getRepositoryUrlFromManifest(version, ext) {
+  const base = version?.fallbackAssetUri || version?.assetUri;
+  if (base && typeof base === 'string') {
+    const baseStr = base.replace(/\/$/, '');
+    const url1 = `${baseStr}/${ASSET_TYPE_MANIFEST}`;
+    const repo = await fetchManifestAndGetRepo(url1);
+    if (repo) return repo;
+    const url2 = `${baseStr}/assetbyname/${ASSET_TYPE_MANIFEST}`;
+    return await fetchManifestAndGetRepo(url2);
+  }
+  if (ext?.publisher?.publisherName && ext?.extensionName && version?.version) {
+    const publisher = encodeURIComponent(ext.publisher.publisherName.toLowerCase());
+    const extensionName = encodeURIComponent(ext.extensionName.toLowerCase());
+    const ver = encodeURIComponent(version.version);
+    const manifestUrl = `https://${ext.publisher.publisherName.toLowerCase()}.gallery.vsassets.io/_apis/public/gallery/publisher/${publisher}/extension/${extensionName}/${ver}/assetbyname/${ASSET_TYPE_MANIFEST}`;
+    return await fetchManifestAndGetRepo(manifestUrl);
+  }
+  return null;
 }
 
 function isPublicRepoUrl(url) {
