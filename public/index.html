@@ -305,6 +305,24 @@
       resize: vertical;
       white-space: pre-wrap;
     }
+    .repo-trust-box {
+      margin-top: 1.5rem;
+    }
+    .repo-trust-box label { display: block; margin-bottom: 0.25rem; }
+    .repo-trust-box .breakdown-text {
+      width: 100%;
+      min-height: 140px;
+      padding: 0.75rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      resize: vertical;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -360,6 +378,14 @@
       <div class="risk-breakdown-box">
         <label for="risk-breakdown-text">Risk score breakdown</label>
         <textarea id="risk-breakdown-text" class="breakdown-text" readonly placeholder="Click a row in the table above to see decision, score breakdown and triggered rules for that extension."></textarea>
+      </div>
+      <div class="repo-trust-box">
+        <label for="repo-trust-text">GitHub repo details &amp; trust</label>
+        <p class="hint">For a row with a public repo link, click the row then &quot;Fetch repo trust&quot; to load GitHub data and repo trustworthiness (score, decision, triggered rules). All policy rules are listed below.</p>
+        <div class="actions" style="margin-bottom: 0.5rem;">
+          <button type="button" class="btn btn-secondary" id="fetch-repo-trust-btn" disabled>Fetch repo trust</button>
+        </div>
+        <textarea id="repo-trust-text" class="breakdown-text" readonly placeholder="Select a row that has a repo link (e.g. hasPublicRepo), then click Fetch repo trust."></textarea>
       </div>
       <div class="copy-area">
         <label for="tsv-block">Copy to Excel (tab-separated)</label>
@@ -542,6 +568,80 @@
       return { score, decision, triggeredRules: triggered, triggeredWithPoints };
     }
 
+    function formatRepoDetails(repo) {
+      const lines = [];
+      lines.push('——— GitHub repo details ———');
+      if (repo.url) lines.push('URL: ' + repo.url);
+      if (repo.owner != null) lines.push('Owner: ' + repo.owner);
+      if (repo.repo != null) lines.push('Repo: ' + repo.repo);
+      if (repo.stars != null) lines.push('Stars: ' + repo.stars);
+      if (repo.forks != null) lines.push('Forks: ' + repo.forks);
+      if (repo.openIssues != null) lines.push('Open issues: ' + repo.openIssues);
+      if (repo.openPullRequests != null) lines.push('Open pull requests: ' + repo.openPullRequests);
+      if (repo.ageDays != null) lines.push('Repo age (days): ' + repo.ageDays);
+      if (repo.daysSincePush != null) lines.push('Days since last push: ' + repo.daysSincePush);
+      if (repo.contributorCount != null) lines.push('Contributor count: ' + repo.contributorCount);
+      if (repo.defaultBranch) lines.push('Default branch: ' + repo.defaultBranch);
+      if (repo.hasIssuesEnabled != null) lines.push('Issues enabled: ' + repo.hasIssuesEnabled);
+      if (repo.language) lines.push('Language: ' + repo.language);
+      if (repo.createdAt) lines.push('Created: ' + repo.createdAt);
+      if (repo.updatedAt) lines.push('Updated: ' + repo.updatedAt);
+      if (repo.pushedAt) lines.push('Pushed: ' + repo.pushedAt);
+      if (repo.description) lines.push('Description: ' + repo.description);
+      return lines.join('\n');
+    }
+
+    function formatRepoTrustSection(repoTrust) {
+      if (!repoTrust) return 'Repo trust: (not available)';
+      const lines = [];
+      lines.push('——— Repo trust ———');
+      lines.push('Score: ' + repoTrust.score);
+      lines.push('Decision: ' + (repoTrust.decision ?? '—'));
+      if (Array.isArray(repoTrust.triggeredWithPoints) && repoTrust.triggeredWithPoints.length) {
+        lines.push('Triggered rules:');
+        repoTrust.triggeredWithPoints.forEach(({ rule, points }) => {
+          lines.push('  • ' + rule + ': +' + points);
+        });
+      }
+      if (Array.isArray(repoTrust.triggeredRules) && repoTrust.triggeredRules.length) {
+        lines.push('List: ' + repoTrust.triggeredRules.join(', '));
+      }
+      return lines.join('\n');
+    }
+
+    function formatAllRepoPolicyRules(policy) {
+      if (!policy || !policy.rules) return '';
+      const R = policy.rules;
+      const lines = [];
+      lines.push('——— All GitHub repo trust rules (policy) ———');
+      lines.push('Thresholds: review >= ' + (policy.thresholds?.review ?? '?') + ', block >= ' + (policy.thresholds?.block ?? '?'));
+      lines.push('');
+      if (R.engagement) {
+        lines.push('Engagement:');
+        lines.push('  • Low star count (stars < minStars, default 10)');
+        lines.push('  • No or very few forks (forks < minForks, default 1)');
+        lines.push('');
+      }
+      if (R.health) {
+        lines.push('Health:');
+        lines.push('  • High open issue count (openIssues > maxOpenIssues, default 50)');
+        lines.push('  • High open-issues-to-stars ratio (ratio > openIssuesToStarsRatio, default 2)');
+        lines.push('');
+      }
+      if (R.freshness) {
+        lines.push('Freshness:');
+        lines.push('  • Repo very new (ageDays < minRepoAgeDays, default 90)');
+        lines.push('  • Repo dormant (daysSincePush > maxDaysSincePush, default 365)');
+        lines.push('');
+      }
+      if (R.maintainers) {
+        lines.push('Maintainers:');
+        lines.push('  • No contributors listed (contributorCount < minContributors, default 1)');
+        lines.push('  • Solo maintainer (contributorCount === 1)');
+      }
+      return lines.join('\n');
+    }
+
     function buildRiskBreakdownText(r) {
       if (r.riskScore == null || r.riskScore === '') return '';
       const parts = [];
@@ -597,12 +697,18 @@
       if (!rows.length) {
         section.hidden = true;
         currentResultRows = [];
+        selectedRowIndex = -1;
+        document.getElementById('fetch-repo-trust-btn').disabled = true;
+        document.getElementById('repo-trust-text').value = '';
         return;
       }
 
       currentResultRows = rows;
       section.hidden = false;
       breakdownText.value = '';
+      selectedRowIndex = -1;
+      document.getElementById('fetch-repo-trust-btn').disabled = true;
+      document.getElementById('repo-trust-text').value = '';
 
       tbody.innerHTML = rows
         .map(
@@ -636,6 +742,8 @@
       tsvBlock.value = buildTsv(rows);
     }
 
+    let selectedRowIndex = -1;
+
     document.getElementById('results-body').addEventListener('click', (ev) => {
       const tbody = ev.currentTarget;
       const tr = ev.target.closest('tr');
@@ -644,8 +752,14 @@
       if (isNaN(idx) || idx < 0 || idx >= currentResultRows.length) return;
       tbody.querySelectorAll('tr.selected').forEach((row) => row.classList.remove('selected'));
       tr.classList.add('selected');
+      selectedRowIndex = idx;
       const row = currentResultRows[idx];
       document.getElementById('risk-breakdown-text').value = buildRiskBreakdownText(row);
+      const repoBtn = document.getElementById('fetch-repo-trust-btn');
+      repoBtn.disabled = !row.repoUrl;
+      if (!row.repoUrl) {
+        document.getElementById('repo-trust-text').value = '';
+      }
     });
 
     const MAX_EXTENSIONS_PER_REQUEST = 24;
@@ -750,6 +864,7 @@
               triggeredRules: hasApiRisk ? (r.triggeredRules || []) : undefined,
               riskBreakdown: hasApiRisk ? (r.riskBreakdown || []) : undefined,
               publisherVerified: r.publisherVerified,
+              repoUrl: r.repoUrl || undefined,
               error: r.error || '',
               _metadata: hasApiRisk ? null : {
                 publisherVerified: r.publisherVerified === true,
@@ -823,8 +938,56 @@
 
     textarea.addEventListener('input', update);
     textarea.addEventListener('paste', () => setTimeout(update, 0));
+    async function fetchRepoTrust() {
+      if (selectedRowIndex < 0 || selectedRowIndex >= currentResultRows.length) return;
+      const row = currentResultRows[selectedRowIndex];
+      if (!row.repoUrl) {
+        setStatus('Selected row has no repo link', 'error');
+        return;
+      }
+      const repoBtn = document.getElementById('fetch-repo-trust-btn');
+      const repoText = document.getElementById('repo-trust-text');
+      repoBtn.disabled = true;
+      setStatus('Fetching repo data…', 'loading');
+      try {
+        const res = await fetch('/api/github-repo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repoUrl: row.repoUrl }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          repoText.value = 'Error: ' + (data.error || res.status);
+          setStatus(data.error || 'Request failed', 'error');
+          return;
+        }
+        let policy = null;
+        try {
+          const policyRes = await fetch('/github-repo-safety-policy.json');
+          if (policyRes.ok) policy = await policyRes.json();
+        } catch {}
+        const sections = [];
+        if (data.repo && !data.repo.error) {
+          sections.push(formatRepoDetails(data.repo));
+        } else if (data.repo?.error) {
+          sections.push('Repo error: ' + data.repo.error);
+        }
+        sections.push('');
+        sections.push(formatRepoTrustSection(data.repoTrust));
+        sections.push('');
+        sections.push(formatAllRepoPolicyRules(policy));
+        repoText.value = sections.join('\n');
+        setStatus('');
+      } catch (err) {
+        repoText.value = 'Error: ' + (err.message || 'Request failed');
+        setStatus(err.message || 'Request failed', 'error');
+      }
+      repoBtn.disabled = false;
+    }
+
     document.getElementById('fetch-btn').addEventListener('click', fetchDetails);
     document.getElementById('copy-btn').addEventListener('click', copyTsv);
+    document.getElementById('fetch-repo-trust-btn').addEventListener('click', fetchRepoTrust);
     update();
   </script>
 </body>
