@@ -36,7 +36,7 @@ POST /api/fetch-extensions
 ```
 
 - **`extensions`** (required): array of strings. Each string is one extension ID (`publisher.extension`). Duplicates are allowed; order is preserved.
-- **Limit:** Up to **250** extension IDs per request. Larger requests get `400` with an error message.
+- **Limit:** Up to **49** extension IDs per request (to stay under Cloudflare Workers’ subrequest limit on the free tier). For longer lists, call the API multiple times in batches and merge the `results` arrays. The web UI does this automatically.
 
 ---
 
@@ -109,8 +109,8 @@ Body is JSON with an `error` message:
 
 | Status | Meaning |
 |--------|---------|
-| 400    | Bad request: missing/invalid body, no extension IDs, or more than 250 IDs. |
-| 500    | Server error (e.g. Marketplace timeout). |
+| 400    | Bad request: missing/invalid body, no extension IDs, or more than 49 IDs per request. |
+| 500    | Server error (e.g. Marketplace timeout, or “Too many subrequests” if the batch is too large). |
 
 ---
 
@@ -153,3 +153,13 @@ console.log(data.results);
 - **`riskScore`** – Use for sorting or custom thresholds; `triggeredRules` / `riskBreakdown` explain why.
 
 The policy (weights and thresholds) is defined in `extension-safety-policy.json` on the same host; you can fetch it from `GET /extension-safety-policy.json` if you need the exact rules and thresholds.
+
+---
+
+## Batching for long lists
+
+Cloudflare Workers have a **subrequest limit** (50 on the free tier). Each extension lookup uses one subrequest, plus one for the policy, so the API accepts at most **49 extensions per request**. For 100+ extensions:
+
+1. Split your list into chunks of 49 (or fewer).
+2. Call `POST /api/fetch-extensions` once per chunk with `{ "extensions": chunk }`.
+3. Concatenate the `results` arrays in order to get one combined list.

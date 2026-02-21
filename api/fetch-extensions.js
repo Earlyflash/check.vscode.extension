@@ -92,7 +92,8 @@ async function fetchOneExtension(extensionId) {
 }
 
 const BATCH_SIZE = 10;
-const MAX_EXTENSIONS = 250;
+// Stay under Cloudflare Workers subrequest limit (50 on free tier = 1 policy fetch + N Marketplace fetches).
+const MAX_EXTENSIONS = 49;
 
 async function runInBatches(arr, batchSize, fn) {
   const results = [];
@@ -118,7 +119,9 @@ export async function handleFetchExtensions(request) {
     }
     if (extensions.length > MAX_EXTENSIONS) {
       return Response.json(
-        { error: `Too many extensions (max ${MAX_EXTENSIONS}). Split your list or reduce the number.` },
+        {
+          error: `Too many extensions (max ${MAX_EXTENSIONS} per request). Split your list into smaller batches and call the API once per batch, or reduce the number. On Cloudflare free tier, "Too many subrequests" means the same limit.`,
+        },
         { status: 400 }
       );
     }
@@ -178,9 +181,10 @@ export async function handleFetchExtensions(request) {
     return Response.json({ results });
   } catch (err) {
     console.error('handleFetchExtensions error:', err);
-    return Response.json(
-      { error: err.message || 'Failed to fetch extension data. Try fewer extensions or try again.' },
-      { status: 500 }
-    );
+    const msg =
+      err?.message?.includes('subrequest') || err?.message?.includes('Too many')
+        ? `Too many subrequests. Use at most ${MAX_EXTENSIONS} extensions per request and call the API in batches for larger lists.`
+        : err?.message || 'Failed to fetch extension data. Try fewer extensions or try again.';
+    return Response.json({ error: msg }, { status: 500 });
   }
 }
