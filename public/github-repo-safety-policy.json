@@ -1,0 +1,38 @@
+{
+  "version": "1.0",
+  "description": "Trustworthiness rules for public GitHub repos linked to VS Code extensions. Higher score = higher risk.",
+  "weights": {
+    "engagement": 25,
+    "health": 25,
+    "freshness": 25,
+    "maintainers": 25
+  },
+  "thresholds": {
+    "review": 20,
+    "block": 45
+  },
+  "rules": {
+    "engagement": {
+      "minStars": 10,
+      "minForks": 1,
+      "flagIfVeryLowStars": true,
+      "flagIfZeroForks": true
+    },
+    "health": {
+      "maxOpenIssues": 50,
+      "flagIfHighOpenIssuesRatio": true,
+      "openIssuesToStarsRatio": 2,
+      "issuesDisabledRaisesConcern": false
+    },
+    "freshness": {
+      "minRepoAgeDays": 90,
+      "maxDaysSincePush": 365,
+      "flagIfVeryNewRepo": true,
+      "flagIfDormant": true
+    },
+    "maintainers": {
+      "minContributors": 1,
+      "flagIfSoloMaintainer": true
+    }
+  }
+}

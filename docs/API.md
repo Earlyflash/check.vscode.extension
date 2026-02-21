@@ -85,6 +85,8 @@ POST /api/fetch-extensions
 | `ratingCount`            | string  | Number of ratings/reviews. |
 | `installCount`           | string  | Install count. |
 | `publisherVerified`      | boolean | Whether the publisher is verified. |
+| `hasPublicRepo`         | boolean | Whether a known public repo URL is linked. |
+| `repoUrl`               | string (optional) | Repository URL when present (use with `POST /api/github-repo` for repo data and trust). |
 
 **Trust (safety policy):**
 
@@ -163,3 +165,62 @@ Cloudflare Workers have a **subrequest limit** (50 on the free tier). Each exten
 1. Split your list into chunks of 49 (or fewer).
 2. Call `POST /api/fetch-extensions` once per chunk with `{ "extensions": chunk }`.
 3. Concatenate the `results` arrays in order to get one combined list.
+
+---
+
+## GitHub repo data and trust
+
+For extensions that link to a **public GitHub repo**, you can fetch repo metadata and a **repo trust score** (separate from extension trust). Repo data comes from the **GitHub API** (not the Marketplace).
+
+### Endpoint
+
+```
+POST /api/github-repo
+```
+
+**Body:** JSON with the repo URL (from the extension’s Marketplace “Repository” link, or from `repoUrl` in fetch-extensions results when present).
+
+```json
+{
+  "repoUrl": "https://github.com/owner/repo"
+}
+```
+
+**Response:** JSON with `repo` (metadata) and `repoTrust` (score and decision from `github-repo-safety-policy.json`).
+
+### Repo data returned
+
+| Field               | Type    | Description |
+|---------------------|---------|--------------|
+| `owner`, `repo`     | string  | Repository owner and name. |
+| `url`               | string  | GitHub repo URL. |
+| `stars`             | number  | Star count. |
+| `forks`             | number  | Fork count. |
+| `openIssues`        | number  | Open issues count. |
+| `openPullRequests`  | number  | Open PRs (or `null` if unavailable). |
+| `createdAt`, `updatedAt`, `pushedAt` | string (ISO) or null | Repo and last-push timestamps. |
+| `ageDays`           | number  | Repo age in days. |
+| `daysSincePush`     | number  | Days since last push. |
+| `contributorCount`  | number or null | Number of contributors. |
+| `defaultBranch`     | string  | Default branch. |
+| `hasIssuesEnabled`  | boolean | Whether issues are enabled. |
+| `language`, `description` | string or null | From GitHub. |
+
+### Repo trust
+
+When the server loads `github-repo-safety-policy.json`, the response includes `repoTrust`:
+
+- **`score`** – Risk score (higher = riskier).
+- **`decision`** – `"ALLOW"`, `"REVIEW"`, or `"BLOCK"` from policy thresholds.
+- **`triggeredRules`** – Rule names that contributed.
+- **`triggeredWithPoints`** – `{ rule, points }` per rule.
+
+**Rate limits:** The GitHub API allows 60 requests/hour unauthenticated. For higher limits, set `GITHUB_TOKEN` in the Worker environment (e.g. in `wrangler.toml` or secrets).
+
+### Example
+
+```bash
+curl -X POST "https://everyminute.<your-subdomain>.workers.dev/api/github-repo" \
+  -H "Content-Type: application/json" \
+  -d '{"repoUrl":"https://github.com/microsoft/vscode"}'
+```

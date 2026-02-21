@@ -3,6 +3,37 @@ import { evaluateExtension } from './evaluate.js';
 const MARKETPLACE_URL =
   'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery?api-version=3.0-preview.1';
 
+const ASSET_TYPE_REPOSITORY = 'Microsoft.VisualStudio.Services.Links.Source';
+
+// Known public hosts; repo URL from manifest/Marketplace is considered "public" if it points here.
+const PUBLIC_REPO_HOSTS = [
+  'github.com',
+  'gitlab.com',
+  'bitbucket.org',
+  'sourceforge.net',
+  'codeberg.org',
+];
+
+function getRepositoryUrlFromVersion(version) {
+  if (!version) return null;
+  if (version.properties && Array.isArray(version.properties)) {
+    const repoProp = version.properties.find((p) => p.key === ASSET_TYPE_REPOSITORY && p.value);
+    if (repoProp && typeof repoProp.value === 'string') return repoProp.value.trim();
+  }
+  return null;
+}
+
+function isPublicRepoUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const u = new URL(url.startsWith('git@') ? `https://${url.replace(':', '/')}` : url);
+    const host = u.hostname.toLowerCase().replace(/^www\./, '');
+    return PUBLIC_REPO_HOSTS.some((h) => host === h || host.endsWith('.' + h));
+  } catch {
+    return false;
+  }
+}
+
 async function fetchOneExtension(extensionId) {
   const body = {
     filters: [
@@ -37,6 +68,8 @@ async function fetchOneExtension(extensionId) {
       ratingCount: '',
       installCount: '',
       publisherVerified: false,
+      hasPublicRepo: false,
+      repoUrl: undefined,
     };
   }
 
@@ -55,6 +88,8 @@ async function fetchOneExtension(extensionId) {
       ratingCount: '',
       installCount: '',
       publisherVerified: false,
+      hasPublicRepo: false,
+      repoUrl: undefined,
     };
   }
 
@@ -76,6 +111,9 @@ async function fetchOneExtension(extensionId) {
   const publisherFlags = ext.publisher?.flags ?? '';
   const publisherVerified = typeof publisherFlags === 'string' && publisherFlags.indexOf('verified') !== -1;
 
+  const repoUrl = getRepositoryUrlFromVersion(latest);
+  const hasPublicRepo = isPublicRepoUrl(repoUrl);
+
   return {
     extensionId,
     error: '',
@@ -88,6 +126,8 @@ async function fetchOneExtension(extensionId) {
     ratingCount,
     installCount,
     publisherVerified,
+    hasPublicRepo,
+    repoUrl: repoUrl || undefined,
   };
 }
 
@@ -160,7 +200,7 @@ export async function handleFetchExtensions(request) {
           dormantMonths,
           installs,
           rating,
-          hasPublicRepo: undefined,
+          hasPublicRepo: r.hasPublicRepo === true,
           usesChildProcess: false,
           usesEval: false,
           hasHardcodedIP: false,

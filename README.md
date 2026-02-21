@@ -9,17 +9,23 @@ Web app to list VS Code extensions by ID (`publisher.extension`), fetch details 
 - Risk scoring from `public/extension-safety-policy.json`; breakdown when you select a row.
 - Copy-to-Excel: tab-separated output for the table.
 
-**API for external callers:** You can get extension details and trust (risk score, decision) from scripts or other apps. See [docs/API.md](docs/API.md) for the request/response format, limits, and examples (curl, PowerShell, fetch).
+**API for external callers:** You can get extension details and trust (risk score, decision) from scripts or other apps. See [docs/API.md](docs/API.md) for the request/response format, limits, and examples. The same doc describes **GitHub repo data and trust**: `POST /api/github-repo` with a repo URL returns stars, forks, issues, activity, contributors, and a repo trust score from `public/github-repo-safety-policy.json` (see [docs/github-repo-trust-rules.md](docs/github-repo-trust-rules.md)).
+
+**Tests:** Run `npm test` for extension evaluator tests; run `npm run test:repo` for GitHub repo trust evaluator tests.
 
 ## Project structure (Worker + static assets)
 
 ```
 ├── public/                    # Static assets (served at site root)
 │   ├── index.html
-│   └── extension-safety-policy.json
+│   ├── extension-safety-policy.json
+│   └── github-repo-safety-policy.json
 ├── api/
-│   └── fetch-extensions.js    # API logic used by the Worker
-├── worker.js                  # Worker entry: routes /api/fetch-extensions
+│   ├── fetch-extensions.js    # Extension details + trust
+│   ├── github-repo.js         # GitHub API: repo data
+│   ├── github-repo-handler.js # POST /api/github-repo
+│   ├── evaluate.js / evaluate-repo.js
+├── worker.js                  # Routes /api/fetch-extensions, /api/github-repo
 ├── wrangler.toml              # Worker name, main, assets directory
 ├── package.json
 └── evaluate-extension.js      # Standalone evaluator (Node/CI)
