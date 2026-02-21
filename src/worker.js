@@ -11,7 +11,7 @@ export default {
     const url = new URL(request.url);
     const origin = url.origin;
     if (url.pathname === '/api/fetch-extensions' && request.method === 'POST') {
-      return handleFetchExtensions(request);
+      return handleFetchExtensions(request, env);
     }
     if (url.pathname === '/api/github-repo' && request.method === 'POST') {
       return handleGitHubRepo(request, env, origin);

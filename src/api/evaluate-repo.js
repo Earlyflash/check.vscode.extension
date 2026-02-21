@@ -29,14 +29,14 @@ export function evaluateRepo(metadata, policy) {
     metadata.stars !== undefined &&
     metadata.stars < minStars
   ) {
-    add(W.engagement / 2 ?? 12.5, 'Low star count');
+    add((W.engagement ?? 25) / 2, 'Low star count');
   }
   if (
     eng.flagIfZeroForks !== false &&
     metadata.forks !== undefined &&
     metadata.forks < (eng.minForks ?? 1)
   ) {
-    add(W.engagement / 2 ?? 12.5, 'No or very few forks');
+    add((W.engagement ?? 25) / 2, 'No or very few forks');
   }
 
   // ---- Health: many open issues or high issue-to-stars ratio ----
@@ -45,7 +45,7 @@ export function evaluateRepo(metadata, policy) {
     metadata.openIssues !== undefined &&
     metadata.openIssues > maxOpen
   ) {
-    add(W.health / 2 ?? 12.5, 'High open issue count');
+    add((W.health ?? 25) / 2, 'High open issue count');
   }
   if (
     health.flagIfHighOpenIssuesRatio !== false &&
@@ -56,7 +56,7 @@ export function evaluateRepo(metadata, policy) {
     const ratio = metadata.openIssues / metadata.stars;
     const maxRatio = health.openIssuesToStarsRatio ?? 2;
     if (ratio > maxRatio) {
-      add(W.health / 2 ?? 12.5, 'High open-issues-to-stars ratio');
+      add((W.health ?? 25) / 2, 'High open-issues-to-stars ratio');
     }
   }
 
@@ -67,7 +67,7 @@ export function evaluateRepo(metadata, policy) {
     metadata.ageDays !== undefined &&
     metadata.ageDays < minAge
   ) {
-    add(W.freshness / 2 ?? 12.5, 'Repo very new');
+    add((W.freshness ?? 25) / 2, 'Repo very new');
   }
   const maxDaysSincePush = fresh.maxDaysSincePush ?? 365;
   if (
@@ -75,7 +75,7 @@ export function evaluateRepo(metadata, policy) {
     metadata.daysSincePush !== undefined &&
     metadata.daysSincePush > maxDaysSincePush
   ) {
-    add(W.freshness / 2 ?? 12.5, 'Repo dormant (no recent push)');
+    add((W.freshness ?? 25) / 2, 'Repo dormant (no recent push)');
   }
 
   // ---- Maintainers: bus factor (only when we have a known count) ----

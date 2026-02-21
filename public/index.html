@@ -352,7 +352,7 @@
 
     <section class="results-section" id="results-section" hidden>
       <h2>Marketplace details</h2>
-      <p class="hint" style="margin-top: 0;"><strong>Error</strong> column: per-extension problems only (e.g. Not found, HTTP errors). Empty = no error for that extension. Request-level errors appear in the status message above.</p>
+      <p class="hint" style="margin-top: 0;"><strong>Extension</strong> = extension trust (score + decision). <strong>GitHub</strong> = repo trust (score + decision), or — until you click a row and &quot;Fetch repo trust&quot;. <strong>Decision</strong> = combined rating (worst of Extension and GitHub). <strong>Error</strong> = per-extension problems only.</p>
       <div class="table-wrap">
         <table id="results-table">
           <thead>
@@ -365,7 +365,8 @@
               <th>Rating</th>
               <th>Reviews</th>
               <th>Installs</th>
-              <th>Risk score</th>
+              <th>Extension</th>
+              <th>GitHub</th>
               <th>Decision</th>
               <th>Triggered rules</th>
               <th>Link</th>
@@ -564,6 +565,9 @@
       let decision = 'ALLOW';
       if (score >= block) decision = 'BLOCK';
       else if (score >= review) decision = 'REVIEW';
+      if (policy.rules.supplyChain?.requirePublicRepo && metadata.hasPublicRepo === false) {
+        decision = 'BLOCK';
+      }
 
       return { score, decision, triggeredRules: triggered, triggeredWithPoints };
     }
@@ -660,11 +664,34 @@
       return parts.join('\n');
     }
 
+    /** Combined decision: BLOCK if either is BLOCK, else REVIEW if either is REVIEW, else ALLOW. */
+    function combinedDecision(extDecision, repoTrust) {
+      const ext = extDecision === 'BLOCK' || extDecision === 'REVIEW' || extDecision === 'ALLOW' ? extDecision : null;
+      const repoDec = repoTrust?.decision;
+      const repo = repoDec === 'BLOCK' || repoDec === 'REVIEW' || repoDec === 'ALLOW' ? repoDec : null;
+      if (ext === 'BLOCK' || repo === 'BLOCK') return 'BLOCK';
+      if (ext === 'REVIEW' || repo === 'REVIEW') return 'REVIEW';
+      return ext || repo || 'ALLOW';
+    }
+
+    function extensionCellText(r) {
+      if (r.riskScore === undefined || r.riskScore === '' || r.riskScore === '—') return '—';
+      return (r.riskScore ?? '—') + ' ' + (r.riskDecision ?? '—');
+    }
+
+    function githubCellText(r) {
+      if (!r.repoTrust) return '—';
+      const s = r.repoTrust.score;
+      const d = r.repoTrust.decision;
+      return (s != null ? s : '—') + ' ' + (d ?? '—');
+    }
+
     function buildTsv(rows) {
-      const header = ['Publisher', 'Extension name', 'Current version', 'Last version', 'Last version update date', 'Rating', 'Reviews', 'Installs', 'Risk score', 'Decision', 'Triggered rules', 'Link', 'Error'];
+      const header = ['Publisher', 'Extension name', 'Current version', 'Last version', 'Last version update date', 'Rating', 'Reviews', 'Installs', 'Extension', 'GitHub', 'Decision', 'Triggered rules', 'Link', 'Error'];
       const lines = [header.join('\t')];
       for (const r of rows) {
         const link = r.extensionId ? MARKETPLACE_ITEM_URL + r.extensionId : '';
+        const combined = combinedDecision(r.riskDecision, r.repoTrust);
         lines.push(
           [
             tsvEscape(r.publisher),
@@ -675,8 +702,9 @@
             tsvEscape(r.rating),
             tsvEscape(r.ratingCount),
             tsvEscape(r.installCount),
-            tsvEscape(r.riskScore),
-            tsvEscape(r.riskDecision),
+            tsvEscape(extensionCellText(r)),
+            tsvEscape(githubCellText(r)),
+            tsvEscape(combined),
             tsvEscape(Array.isArray(r.triggeredRules) ? r.triggeredRules.join('; ') : ''),
             tsvEscape(link),
             tsvEscape(r.error),
@@ -717,9 +745,11 @@
             const linkCell = link
               ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open</a>`
               : '';
-            const decisionClass = r.riskDecision === 'BLOCK' ? 'risk-block' : r.riskDecision === 'REVIEW' ? 'risk-review' : '';
+            const combined = combinedDecision(r.riskDecision, r.repoTrust);
+            const decisionClass = combined === 'BLOCK' ? 'risk-block' : combined === 'REVIEW' ? 'risk-review' : '';
             const triggeredText = Array.isArray(r.triggeredRules) && r.triggeredRules.length ? r.triggeredRules.join(', ') : '—';
-            const riskScoreVal = r.riskScore ?? '—';
+            const extCell = extensionCellText(r);
+            const ghCell = githubCellText(r);
             return `<tr class="${decisionClass}" data-row-index="${idx}">
               <td>${escapeHtml(r.publisher)}</td>
               <td>${escapeHtml(r.extensionName)}</td>
@@ -729,8 +759,9 @@
               <td>${escapeHtml(r.rating)}</td>
               <td>${escapeHtml(r.ratingCount ?? '—')}</td>
               <td>${escapeHtml(r.installCount || '—')}</td>
-              <td>${escapeHtml(String(riskScoreVal))}</td>
-              <td>${escapeHtml(r.riskDecision ?? '—')}</td>
+              <td>${escapeHtml(extCell)}</td>
+              <td>${escapeHtml(ghCell)}</td>
+              <td>${escapeHtml(combined)}</td>
               <td title="${escapeHtml(triggeredText)}">${escapeHtml(triggeredText.length > 60 ? triggeredText.slice(0, 57) + '…' : triggeredText)}</td>
               <td>${linkCell}</td>
               <td class="${r.error ? 'error-cell' : ''}">${escapeHtml(r.error)}</td>
@@ -740,6 +771,49 @@
         .join('');
 
       tsvBlock.value = buildTsv(rows);
+    }
+
+    function refreshResultsBody() {
+      if (!currentResultRows.length) return;
+      const tbody = document.getElementById('results-body');
+      const tsvBlock = document.getElementById('tsv-block');
+      const prevSelected = selectedRowIndex;
+      tbody.innerHTML = currentResultRows
+        .map(
+          (r, idx) => {
+            const link = r.extensionId ? MARKETPLACE_ITEM_URL + encodeURIComponent(r.extensionId) : '';
+            const linkCell = link
+              ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open</a>`
+              : '';
+            const combined = combinedDecision(r.riskDecision, r.repoTrust);
+            const decisionClass = combined === 'BLOCK' ? 'risk-block' : combined === 'REVIEW' ? 'risk-review' : '';
+            const triggeredText = Array.isArray(r.triggeredRules) && r.triggeredRules.length ? r.triggeredRules.join(', ') : '—';
+            const extCell = extensionCellText(r);
+            const ghCell = githubCellText(r);
+            return `<tr class="${decisionClass}" data-row-index="${idx}">
+              <td>${escapeHtml(r.publisher)}</td>
+              <td>${escapeHtml(r.extensionName)}</td>
+              <td>${escapeHtml(r.currentVersion || '—')}</td>
+              <td>${escapeHtml(r.lastVersion || '—')}</td>
+              <td>${escapeHtml(r.lastVersionUpdateDate)}</td>
+              <td>${escapeHtml(r.rating)}</td>
+              <td>${escapeHtml(r.ratingCount ?? '—')}</td>
+              <td>${escapeHtml(r.installCount || '—')}</td>
+              <td>${escapeHtml(extCell)}</td>
+              <td>${escapeHtml(ghCell)}</td>
+              <td>${escapeHtml(combined)}</td>
+              <td title="${escapeHtml(triggeredText)}">${escapeHtml(triggeredText.length > 60 ? triggeredText.slice(0, 57) + '…' : triggeredText)}</td>
+              <td>${linkCell}</td>
+              <td class="${r.error ? 'error-cell' : ''}">${escapeHtml(r.error)}</td>
+            </tr>`;
+          }
+        )
+        .join('');
+      tsvBlock.value = buildTsv(currentResultRows);
+      if (prevSelected >= 0 && prevSelected < currentResultRows.length) {
+        const tr = tbody.querySelector(`tr[data-row-index="${prevSelected}"]`);
+        if (tr) tr.classList.add('selected');
+      }
     }
 
     let selectedRowIndex = -1;
@@ -762,7 +836,7 @@
       }
     });
 
-    const MAX_EXTENSIONS_PER_REQUEST = 24;
+    const MAX_EXTENSIONS_PER_REQUEST = 16;
 
     async function fetchDetails() {
       const entries = parseInput(document.getElementById('extensions').value);
@@ -977,6 +1051,9 @@
         sections.push('');
         sections.push(formatAllRepoPolicyRules(policy));
         repoText.value = sections.join('\n');
+        row.repo = data.repo;
+        row.repoTrust = data.repoTrust;
+        refreshResultsBody();
         setStatus('');
       } catch (err) {
         repoText.value = 'Error: ' + (err.message || 'Request failed');

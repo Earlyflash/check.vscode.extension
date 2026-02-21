@@ -77,13 +77,52 @@ function isPublicRepoUrl(url) {
   try {
     const u = new URL(url.startsWith('git@') ? `https://${url.replace(':', '/')}` : url);
     const host = u.hostname.toLowerCase().replace(/^www\./, '');
-    return PUBLIC_REPO_HOSTS.some((h) => host === h || host.endsWith('.' + h));
+    const isKnownHost = PUBLIC_REPO_HOSTS.some((h) => host === h || host.endsWith('.' + h));
+    if (!isKnownHost) return false;
+    const pathSegments = u.pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+    return pathSegments.length >= 2;
   } catch {
     return false;
   }
 }
 
-async function fetchOneExtension(extensionId) {
+/** Parse GitHub owner/repo from URL; returns null if not GitHub or invalid. */
+function parseGitHubOwnerRepo(url) {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const u = new URL(url.startsWith('git@') ? `https://${url.replace(':', '/')}` : url);
+    if (!/^(?:www\.)?github\.com$/i.test(u.hostname)) return null;
+    const segments = u.pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+    if (segments.length < 2) return null;
+    return { owner: segments[0], repo: segments[1].replace(/\.git$/, '') };
+  } catch {
+    return null;
+  }
+}
+
+/** Verify the GitHub repo exists (200). Returns false on 404, 403, or error. Optional githubToken for higher rate limits. */
+async function verifyGitHubRepoExists(repoUrl, githubToken) {
+  const parsed = parseGitHubOwnerRepo(repoUrl);
+  if (!parsed) return false;
+  const headers = {
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'check-vscode-extension/1.0',
+  };
+  if (githubToken && typeof githubToken === 'string') {
+    headers.Authorization = `Bearer ${githubToken}`;
+  }
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`,
+      { headers }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchOneExtension(extensionId, options = {}) {
   const body = {
     filters: [
       {
@@ -164,7 +203,11 @@ async function fetchOneExtension(extensionId) {
   if (!repoUrl && latest) {
     repoUrl = await getRepositoryUrlFromManifest(latest, ext);
   }
-  const hasPublicRepo = isPublicRepoUrl(repoUrl);
+  let hasPublicRepo = isPublicRepoUrl(repoUrl);
+  if (hasPublicRepo && repoUrl && parseGitHubOwnerRepo(repoUrl)) {
+    const exists = await verifyGitHubRepoExists(repoUrl, options.githubToken);
+    if (!exists) hasPublicRepo = false;
+  }
 
   return {
     extensionId,
@@ -185,8 +228,8 @@ async function fetchOneExtension(extensionId) {
 
 const BATCH_SIZE = 10;
 // Stay under Cloudflare Workers subrequest limit (50 on free tier).
-// Each extension can use 2 subrequests (query + optional manifest for repo URL), plus 1 for policy.
-const MAX_EXTENSIONS = 24;
+// Per extension: 1 Marketplace query + optional manifest + optional GitHub repo verify. Plus 1 for policy.
+const MAX_EXTENSIONS = 16;
 
 async function runInBatches(arr, batchSize, fn) {
   const results = [];
@@ -198,7 +241,7 @@ async function runInBatches(arr, batchSize, fn) {
   return results;
 }
 
-export async function handleFetchExtensions(request) {
+export async function handleFetchExtensions(request, env = {}) {
   let extensions;
   try {
     const body = await request.json();
@@ -223,7 +266,10 @@ export async function handleFetchExtensions(request) {
   }
 
   try {
-    let results = await runInBatches(extensions, BATCH_SIZE, (id) => fetchOneExtension(id));
+    const githubToken = env?.GITHUB_TOKEN;
+    let results = await runInBatches(extensions, BATCH_SIZE, (id) =>
+      fetchOneExtension(id, { githubToken })
+    );
 
     const origin = new URL(request.url).origin;
     let policy = null;
