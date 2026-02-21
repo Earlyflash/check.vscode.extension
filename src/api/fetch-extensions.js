@@ -41,7 +41,7 @@ async function getRepositoryUrlFromManifest(version, ext) {
   let manifestUrl = null;
   const base = version?.fallbackAssetUri || version?.assetUri;
   if (base && typeof base === 'string') {
-    manifestUrl = `${base.replace(/\/$/, '')}/${ASSET_TYPE_MANIFEST}`;
+    manifestUrl = `${base.replace(/\/$/, '')}/assetbyname/${ASSET_TYPE_MANIFEST}`;
   } else if (ext?.publisher?.publisherName && ext?.extensionName && version?.version) {
     const publisher = encodeURIComponent(ext.publisher.publisherName.toLowerCase());
     const extensionName = encodeURIComponent(ext.extensionName.toLowerCase());
@@ -63,6 +63,7 @@ async function getRepositoryUrlFromManifest(version, ext) {
         const rest = s.slice(7).trim().replace(/^\/+|\/+$/g, '');
         return rest ? `https://github.com/${rest}` : null;
       }
+      if (/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(s)) return `https://github.com/${s}`;
       return s || null;
     }
     if (repo && typeof repo.url === 'string') return repo.url.trim();
