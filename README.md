@@ -9,6 +9,8 @@ Web app to list VS Code extensions by ID (`publisher.extension`), fetch details 
 - Risk scoring from `public/extension-safety-policy.json`; breakdown when you select a row.
 - Copy-to-Excel: tab-separated output for the table.
 
+**API for external callers:** You can get extension details and trust (risk score, decision) from scripts or other apps. See [docs/API.md](docs/API.md) for the request/response format, limits, and examples (curl, PowerShell, fetch).
+
 ## Project structure (Worker + static assets)
 
 ```

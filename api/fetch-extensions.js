@@ -1,3 +1,5 @@
+import { evaluateExtension } from './evaluate.js';
+
 const MARKETPLACE_URL =
   'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery?api-version=3.0-preview.1';
 
@@ -125,7 +127,54 @@ export async function handleFetchExtensions(request) {
   }
 
   try {
-    const results = await runInBatches(extensions, BATCH_SIZE, (id) => fetchOneExtension(id));
+    let results = await runInBatches(extensions, BATCH_SIZE, (id) => fetchOneExtension(id));
+
+    const origin = new URL(request.url).origin;
+    let policy = null;
+    try {
+      const policyRes = await fetch(`${origin}/extension-safety-policy.json`);
+      if (policyRes.ok) policy = await policyRes.json();
+    } catch {
+      // continue without trust fields
+    }
+
+    if (policy?.weights && policy?.thresholds && policy?.rules) {
+      results = results.map((r) => {
+        const installs = r.installCount ? parseInt(r.installCount, 10) : undefined;
+        const rating = r.rating ? parseFloat(r.rating) : undefined;
+        let lastUpdatedDaysAgo;
+        let dormantMonths;
+        if (r.lastVersionUpdateDate) {
+          const d = new Date(r.lastVersionUpdateDate);
+          if (!isNaN(d.getTime())) {
+            lastUpdatedDaysAgo = Math.floor((Date.now() - d.getTime()) / (24 * 60 * 60 * 1000));
+            dormantMonths = Math.floor(lastUpdatedDaysAgo / 30.44);
+          }
+        }
+        const metadata = {
+          publisherVerified: r.publisherVerified === true,
+          lastUpdatedDaysAgo,
+          dormantMonths,
+          installs,
+          rating,
+          hasPublicRepo: undefined,
+          usesChildProcess: false,
+          usesEval: false,
+          hasHardcodedIP: false,
+          downloadsRemoteCode: false,
+          isObfuscated: false,
+        };
+        const evalResult = evaluateExtension(metadata, policy);
+        return {
+          ...r,
+          riskScore: evalResult.score,
+          riskDecision: evalResult.decision,
+          triggeredRules: evalResult.triggeredRules,
+          riskBreakdown: evalResult.triggeredWithPoints,
+        };
+      });
+    }
+
     return Response.json({ results });
   } catch (err) {
     console.error('handleFetchExtensions error:', err);
