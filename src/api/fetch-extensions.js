@@ -1,3 +1,10 @@
+/**
+ * Fetch-extensions API: fetches VS Code extension details from the Marketplace,
+ * loads extension-safety-policy.json, and attaches trust (riskScore, riskDecision,
+ * triggeredRules, riskBreakdown). Also sets hasPublicRepo and repoUrl from the
+ * extension's Repository link when present.
+ * Used by: src/worker.js for POST /api/fetch-extensions.
+ */
 import { evaluateExtension } from './evaluate.js';
 
 const MARKETPLACE_URL =

@@ -1,5 +1,5 @@
 /**
- * Extension safety evaluation (same logic as frontend and evaluate-extension.js).
+ * Extension safety evaluation (same logic as frontend and lib/evaluate-extension.js).
  * Used by the API to include trust (risk score, decision) in responses.
  */
 export function evaluateExtension(metadata, policy) {

@@ -1,10 +1,11 @@
 /**
  * Tests for GitHub repo trustworthiness evaluator.
- * Run: node test/evaluate-repo.test.js
+ * Run: npm run test:repo (or node test/evaluate-repo.test.js)
+ * Uses lib/evaluate-repo-extension.js and public/github-repo-safety-policy.json.
  */
 const path = require('path');
 const fs = require('fs');
-const { evaluateRepo } = require('../evaluate-repo-extension.js');
+const { evaluateRepo } = require('../lib/evaluate-repo-extension.js');
 
 const policyPath = path.join(__dirname, '..', 'public', 'github-repo-safety-policy.json');
 const policy = JSON.parse(fs.readFileSync(policyPath, 'utf-8'));

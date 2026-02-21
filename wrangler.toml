@@ -1,8 +1,11 @@
+# Worker name; also the subdomain: https://everyminute.<account>.workers.dev
 name = "everyminute"
-main = "worker.js"
+main = "src/worker.js"
 compatibility_date = "2025-02-20"
 
+# Static assets served at site root; SPA fallback for unknown paths
 [assets]
 directory = "./public/"
 not_found_handling = "single-page-application"
+# Ensure /api/* is handled by the Worker, not by asset lookup
 run_worker_first = ["/api/*"]

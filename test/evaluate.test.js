@@ -1,11 +1,11 @@
 /**
  * Tests for the extension safety evaluator.
- * Run: node test/evaluate.test.js
- * Uses the same policy as the app (public/extension-safety-policy.json).
+ * Run: npm test (or node test/evaluate.test.js)
+ * Uses lib/evaluate-extension.js and public/extension-safety-policy.json.
  */
 const path = require('path');
 const fs = require('fs');
-const { evaluateExtension } = require('../evaluate-extension.js');
+const { evaluateExtension } = require('../lib/evaluate-extension.js');
 
 const policyPath = path.join(__dirname, '..', 'public', 'extension-safety-policy.json');
 const policy = JSON.parse(fs.readFileSync(policyPath, 'utf-8'));

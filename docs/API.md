@@ -2,6 +2,17 @@
 
 This API returns **details** (from the VS Code Marketplace) and **trust** (risk score and decision from the extension safety policy) for a list of extensions. You can call it from scripts, CI, or other apps.
 
+## Contents
+
+1. [POST /api/fetch-extensions](#endpoint) – Extension details and trust
+2. [Request](#request) – Headers, body, limits
+3. [Response](#response) – Success and error
+4. [Examples](#examples) – cURL, PowerShell, fetch
+5. [Batching](#batching-for-long-lists) – Long extension lists
+6. [POST /api/github-repo](#github-repo-data-and-trust) – GitHub repo data and repo trust
+
+---
+
 ## Endpoint
 
 ```
@@ -215,7 +226,19 @@ When the server loads `github-repo-safety-policy.json`, the response includes `r
 - **`triggeredRules`** – Rule names that contributed.
 - **`triggeredWithPoints`** – `{ rule, points }` per rule.
 
-**Rate limits:** The GitHub API allows 60 requests/hour unauthenticated. For higher limits, set `GITHUB_TOKEN` in the Worker environment (e.g. in `wrangler.toml` or secrets).
+**Rate limits:** The GitHub API allows 60 requests/hour unauthenticated. For higher limits, set `GITHUB_TOKEN` in the Worker environment (e.g. via `wrangler secret put GITHUB_TOKEN` or in `.dev.vars` for local dev). See [Configuration](configuration.md#environment-variables--secrets).
+
+### Errors (github-repo)
+
+| Status | Body | Meaning |
+|--------|------|---------|
+| 400 | `{ "error": "Missing \"repoUrl\" or \"url\" in body" }` | Request body missing or invalid. |
+| 400 | `{ "error": "Invalid or non-GitHub repo URL" }` | URL could not be parsed as a GitHub repo. |
+| 400 | `{ "error": "Repository not found" }` | GitHub returned 404. |
+| 400 | `{ "error": "GitHub API limit exceeded (N remaining)" }` | Rate limit hit (when no token or token exhausted). |
+| 400 | `{ "error": "GitHub API error: N" }` | Other GitHub API error (e.g. 500). |
+
+On error, the response is JSON with a single `error` string. On success, `repo` is always present; `repoTrust` is present when the repo policy could be loaded.
 
 ### Example
 

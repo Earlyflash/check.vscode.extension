@@ -70,4 +70,4 @@ Measures bus factor and maintainer diversity.
 - **thresholds**: `review`, `block` (numbers).
 - **rules**: Nested objects per category with the parameters above (e.g. `minStars`, `maxOpenIssues`, `minRepoAgeDays`). Set a rule’s `flagIf...` to `false` to disable that rule.
 
-Repo data is fetched only for **GitHub** URLs. The extension’s `repoUrl` (from the Marketplace) is used to call `POST /api/github-repo` and get `repo` + `repoTrust`.
+Repo data is fetched only for **GitHub** URLs. The extension’s `repoUrl` (from the Marketplace) is used to call `POST /api/github-repo` and get `repo` + `repoTrust`. The Worker uses `src/api/github-repo.js` and `src/api/evaluate-repo.js`; tests use `lib/evaluate-repo-extension.js`.
