@@ -21,7 +21,14 @@ export async function handleGitHubRepo(request, env, origin) {
 
   const repo = await getGitHubRepoData(repoUrl.trim(), env || {});
   if (repo.error) {
-    return Response.json({ error: repo.error }, { status: 400 });
+    const REPO_NOT_FOUND_POINTS = 90;
+    const repoTrust = {
+      score: REPO_NOT_FOUND_POINTS,
+      decision: 'BLOCK',
+      triggeredRules: [repo.error],
+      triggeredWithPoints: [{ rule: repo.error, points: REPO_NOT_FOUND_POINTS }],
+    };
+    return Response.json({ repo: { error: repo.error }, repoTrust });
   }
 
   let policy = null;

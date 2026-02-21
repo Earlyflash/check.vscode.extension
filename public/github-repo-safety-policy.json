@@ -13,8 +13,8 @@
   },
   "rules": {
     "engagement": {
-      "minStars": 10,
-      "minForks": 1,
+      "minStars": 100,
+      "minForks": 2,
       "flagIfVeryLowStars": true,
       "flagIfZeroForks": true
     },

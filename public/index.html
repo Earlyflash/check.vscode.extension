@@ -139,6 +139,64 @@
       margin-top: 1.5rem;
     }
 
+    .parsed-flyout-trigger {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .parsed-flyout-trigger:hover {
+      background: var(--border);
+      border-color: var(--muted);
+    }
+
+    .parsed-flyout-label {
+      color: var(--muted);
+    }
+
+    .parsed-flyout-summary {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .parsed-flyout-icon {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+
+    .parsed-flyout.is-open .parsed-flyout-icon {
+      transform: rotate(-180deg);
+    }
+
+    .parsed-flyout-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease-out;
+    }
+
+    .parsed-flyout.is-open .parsed-flyout-body {
+      max-height: 420px;
+      overflow: auto;
+    }
+
+    .parsed-flyout-body-inner {
+      padding-top: 0.75rem;
+    }
+
     .parsed-list {
       list-style: none;
       padding: 0;
@@ -274,29 +332,80 @@
       color: var(--invalid);
     }
 
-    .table-wrap a {
-      color: var(--accent);
-      text-decoration: none;
+    .results-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
     }
-
-    .table-wrap a:hover {
-      text-decoration: underline;
-    }
-
-    tr.risk-block td { background: rgba(248, 113, 113, 0.12); }
-    tr.risk-review td { background: rgba(251, 191, 36, 0.12); }
-    tr.selected td { background: rgba(167, 139, 250, 0.15); outline: 1px solid var(--accent); }
-
-    .risk-breakdown-box {
-      margin-top: 1rem;
-    }
-    .risk-breakdown-box label { display: block; margin-bottom: 0.25rem; }
-    .risk-breakdown-box .breakdown-text {
-      width: 100%;
-      min-height: 100px;
-      padding: 0.75rem 1rem;
+    .results-list li {
+      padding: 0.6rem 1rem;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .results-list li:last-child { border-bottom: none; }
+    .results-list li:hover { background: var(--border); }
+    .results-list .badge {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      min-width: 3.5rem;
+      text-align: center;
+    }
+    .results-list .badge.badge-ok {
+      background: rgba(52, 211, 153, 0.2);
+      color: var(--valid);
+    }
+    .results-list .badge.badge-review {
+      background: rgba(251, 191, 36, 0.25);
+      color: #f59e0b;
+    }
+    .results-list .badge.badge-block {
+      background: rgba(248, 113, 113, 0.2);
+      color: var(--invalid);
+    }
+    .results-list li.risk-block { background: rgba(248, 113, 113, 0.12); }
+    .results-list li.risk-block:hover { background: rgba(248, 113, 113, 0.18); }
+    .results-list li.risk-review { background: rgba(251, 191, 36, 0.12); }
+    .results-list li.risk-review:hover { background: rgba(251, 191, 36, 0.18); }
+    .results-list li.selected { background: rgba(167, 139, 250, 0.15); outline: 1px solid var(--accent); }
+    .results-list .ext-name { flex: 1; min-width: 0; }
+    .results-list .ext-name a { color: var(--accent); text-decoration: none; }
+    .results-list .ext-name a:hover { text-decoration: underline; }
+    .results-list .score-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .results-list .score-pill--ok { background: rgba(52, 211, 153, 0.2); color: var(--valid); }
+    .results-list .score-pill--review { background: rgba(251, 191, 36, 0.25); color: #f59e0b; }
+    .results-list .score-pill--block { background: rgba(248, 113, 113, 0.2); color: var(--invalid); }
+    .results-list .score-pill--muted { background: var(--border); color: var(--muted); }
+
+    .details-panel {
+      margin-top: 1rem;
+    }
+    .details-panel label { display: block; margin-bottom: 0.25rem; font-size: 0.85rem; color: var(--muted); }
+    .details-panel .details-text {
+      width: 100%;
+      min-height: 200px;
+      padding: 0.75rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
       line-height: 1.5;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -305,13 +414,19 @@
       resize: vertical;
       white-space: pre-wrap;
     }
-    .repo-trust-box {
-      margin-top: 1.5rem;
+
+    .breakdowns-row {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
     }
-    .repo-trust-box label { display: block; margin-bottom: 0.25rem; }
-    .repo-trust-box .breakdown-text {
+    .breakdowns-row > * {
+      flex: 1;
+      min-width: 0;
+    }
+    .breakdown-flyout .parsed-flyout-body-inner .breakdown-text {
       width: 100%;
-      min-height: 140px;
+      min-height: 100px;
       padding: 0.75rem 1rem;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.85rem;
@@ -344,49 +459,26 @@
       <span class="status" id="status"></span>
     </div>
 
-    <section class="parsed-section" id="parsed-section" aria-live="polite">
-      <label>Parsed extensions</label>
-      <ul class="parsed-list" id="parsed-list"></ul>
-      <p class="summary" id="summary"></p>
+    <section class="parsed-section parsed-flyout" id="parsed-section" aria-live="polite" hidden>
+      <button type="button" class="parsed-flyout-trigger" id="parsed-flyout-trigger" aria-expanded="false" aria-controls="parsed-flyout-body">
+        <span class="parsed-flyout-label">Parsed extensions</span>
+        <span class="parsed-flyout-summary" id="parsed-flyout-summary"></span>
+        <span class="parsed-flyout-icon" aria-hidden="true">▼</span>
+      </button>
+      <div class="parsed-flyout-body" id="parsed-flyout-body">
+        <div class="parsed-flyout-body-inner">
+          <ul class="parsed-list" id="parsed-list"></ul>
+          <p class="summary" id="summary"></p>
+        </div>
+      </div>
     </section>
 
     <section class="results-section" id="results-section" hidden>
-      <h2>Marketplace details</h2>
-      <p class="hint" style="margin-top: 0;"><strong>Extension</strong> = extension trust (score + decision). <strong>GitHub</strong> = repo trust (score + decision), or — until you click a row and &quot;Fetch repo trust&quot;. <strong>Decision</strong> = combined rating (worst of Extension and GitHub). <strong>Error</strong> = per-extension problems only.</p>
-      <div class="table-wrap">
-        <table id="results-table">
-          <thead>
-            <tr>
-              <th>Publisher</th>
-              <th>Extension name</th>
-              <th>Current version</th>
-              <th>Last version</th>
-              <th>Last version update date</th>
-              <th>Rating</th>
-              <th>Reviews</th>
-              <th>Installs</th>
-              <th>Extension</th>
-              <th>GitHub</th>
-              <th>Decision</th>
-              <th>Triggered rules</th>
-              <th>Link</th>
-              <th>Error</th>
-            </tr>
-          </thead>
-          <tbody id="results-body"></tbody>
-        </table>
-      </div>
-      <div class="risk-breakdown-box">
-        <label for="risk-breakdown-text">Risk score breakdown</label>
-        <textarea id="risk-breakdown-text" class="breakdown-text" readonly placeholder="Click a row in the table above to see decision, score breakdown and triggered rules for that extension."></textarea>
-      </div>
-      <div class="repo-trust-box">
-        <label for="repo-trust-text">GitHub repo details &amp; trust</label>
-        <p class="hint">For a row with a public repo link, click the row then &quot;Fetch repo trust&quot; to load GitHub data and repo trustworthiness (score, decision, triggered rules). All policy rules are listed below.</p>
-        <div class="actions" style="margin-bottom: 0.5rem;">
-          <button type="button" class="btn btn-secondary" id="fetch-repo-trust-btn" disabled>Fetch repo trust</button>
-        </div>
-        <textarea id="repo-trust-text" class="breakdown-text" readonly placeholder="Select a row that has a repo link (e.g. hasPublicRepo), then click Fetch repo trust."></textarea>
+      <p class="hint" style="margin-top: 0;">Click a row to see full details below. <strong>Extension</strong> and <strong>GitHub</strong> = trust scores; <strong>OK</strong> / <strong>REVIEW</strong> / <strong>BLOCK</strong> = overall rating.</p>
+      <ul class="results-list" id="results-list"></ul>
+      <div class="details-panel">
+        <label for="row-details-text">Details</label>
+        <textarea id="row-details-text" class="details-text" readonly placeholder="Select a row above to see marketplace details, extension trust breakdown, and GitHub repo trust."></textarea>
       </div>
       <div class="copy-area">
         <label for="tsv-block">Copy to Excel (tab-separated)</label>
@@ -430,11 +522,13 @@
       const listEl = document.getElementById('parsed-list');
       const summaryEl = document.getElementById('summary');
       const sectionEl = document.getElementById('parsed-section');
+      const flyoutSummaryEl = document.getElementById('parsed-flyout-summary');
       const fetchBtn = document.getElementById('fetch-btn');
 
       if (entries.length === 0) {
         listEl.innerHTML = '';
         summaryEl.textContent = '';
+        flyoutSummaryEl.textContent = '';
         sectionEl.hidden = true;
         fetchBtn.disabled = true;
         return;
@@ -444,6 +538,11 @@
       const validCount = entries.filter((e) => e.valid).length;
       fetchBtn.disabled = validCount === 0;
 
+      const parts = [];
+      if (validCount) parts.push(`${validCount} valid`);
+      if (entries.length - validCount) parts.push(`${entries.length - validCount} invalid`);
+      flyoutSummaryEl.textContent = parts.length ? `(${parts.join(' · ')})` : `(${entries.length})`;
+
       listEl.innerHTML = entries
         .map(
           (e) =>
@@ -451,10 +550,10 @@
         )
         .join('');
 
-      const parts = [];
-      if (validCount) parts.push(`<strong>${validCount}</strong> valid`);
-      if (entries.length - validCount) parts.push(`<strong>${entries.length - validCount}</strong> invalid format`);
-      summaryEl.innerHTML = parts.join(' · ') || '';
+      const summaryParts = [];
+      if (validCount) summaryParts.push(`<strong>${validCount}</strong> valid`);
+      if (entries.length - validCount) summaryParts.push(`<strong>${entries.length - validCount}</strong> invalid format`);
+      summaryEl.innerHTML = summaryParts.join(' · ') || '';
     }
 
     function tsvEscape(cell) {
@@ -573,6 +672,8 @@
     }
 
     function formatRepoDetails(repo) {
+      if (!repo) return '';
+      if (repo.error) return '——— GitHub repo details ———\nError: ' + repo.error;
       const lines = [];
       lines.push('——— GitHub repo details ———');
       if (repo.url) lines.push('URL: ' + repo.url);
@@ -646,6 +747,31 @@
       return lines.join('\n');
     }
 
+    let repoPolicyCache = null;
+    async function ensureRepoPolicy() {
+      if (repoPolicyCache) return repoPolicyCache;
+      try {
+        const res = await fetch('/github-repo-safety-policy.json');
+        repoPolicyCache = res.ok ? await res.json() : null;
+      } catch {
+        repoPolicyCache = null;
+      }
+      return repoPolicyCache;
+    }
+
+    function buildRepoTrustText(row, policy) {
+      if (!row.repoUrl) return '';
+      const sections = [];
+      if (row.repo) sections.push(formatRepoDetails(row.repo));
+      sections.push('');
+      sections.push(formatRepoTrustSection(row.repoTrust || null));
+      if (policy) {
+        sections.push('');
+        sections.push(formatAllRepoPolicyRules(policy));
+      }
+      return sections.join('\n');
+    }
+
     function buildRiskBreakdownText(r) {
       if (r.riskScore == null || r.riskScore === '') return '';
       const parts = [];
@@ -662,6 +788,36 @@
         parts.push('Triggered rules: ' + r.triggeredRules.join(', '));
       }
       return parts.join('\n');
+    }
+
+    function buildMarketplaceDetailsText(r) {
+      const lines = [];
+      lines.push('——— Marketplace ———');
+      lines.push('Extension: ' + (r.extensionId || r.publisher + '.' + r.extensionName));
+      if (r.publisher) lines.push('Publisher: ' + r.publisher);
+      if (r.currentVersion) lines.push('Current version: ' + r.currentVersion);
+      if (r.lastVersion) lines.push('Last version: ' + r.lastVersion);
+      if (r.lastVersionUpdateDate) lines.push('Last updated: ' + r.lastVersionUpdateDate);
+      if (r.rating != null) lines.push('Rating: ' + r.rating);
+      if (r.ratingCount != null) lines.push('Reviews: ' + r.ratingCount);
+      if (r.installCount != null) lines.push('Installs: ' + r.installCount);
+      if (r.repoUrl) lines.push('Repo URL: ' + r.repoUrl);
+      if (r.error) lines.push('Error: ' + r.error);
+      return lines.join('\n');
+    }
+
+    function buildRowDetailsText(row, policy) {
+      const sections = [];
+      sections.push(buildMarketplaceDetailsText(row));
+      sections.push('');
+      sections.push('——— Extension trust ———');
+      sections.push(buildRiskBreakdownText(row) || '—');
+      if (row.repoUrl) {
+        sections.push('');
+        sections.push('——— GitHub repo ———');
+        sections.push(buildRepoTrustText(row, policy));
+      }
+      return sections.join('\n');
     }
 
     /** Combined decision: BLOCK if either is BLOCK, else REVIEW if either is REVIEW, else ALLOW. */
@@ -684,6 +840,34 @@
       const s = r.repoTrust.score;
       const d = r.repoTrust.decision;
       return (s != null ? s : '—') + ' ' + (d ?? '—');
+    }
+
+    function pillModifierClass(decision) {
+      if (decision === 'BLOCK') return 'score-pill--block';
+      if (decision === 'REVIEW') return 'score-pill--review';
+      if (decision === 'OK' || decision === 'ALLOW') return 'score-pill--ok';
+      return 'score-pill--muted';
+    }
+
+    function extensionPillHtml(r) {
+      const score = r.riskScore;
+      const decision = r.riskDecision;
+      const hasScore = score !== undefined && score !== '' && score !== '—';
+      const label = 'Extension: ';
+      const text = hasScore ? label + score + ' (' + (decision === 'ALLOW' ? 'OK' : (decision || '—')) + ')' : label + '—';
+      const mod = pillModifierClass(decision === 'ALLOW' ? 'OK' : decision);
+      return '<span class="score-pill ' + mod + '">' + escapeHtml(text) + '</span>';
+    }
+
+    function githubPillHtml(r) {
+      if (!r.repoTrust) return '<span class="score-pill score-pill--muted">' + escapeHtml('GitHub: —') + '</span>';
+      const score = r.repoTrust.score;
+      const decision = r.repoTrust.decision;
+      const hasScore = score != null;
+      const label = 'GitHub: ';
+      const text = hasScore ? label + score + ' (' + (decision === 'ALLOW' ? 'OK' : (decision || '—')) + ')' : label + '—';
+      const mod = pillModifierClass(decision === 'ALLOW' ? 'OK' : decision);
+      return '<span class="score-pill ' + mod + '">' + escapeHtml(text) + '</span>';
     }
 
     function buildTsv(rows) {
@@ -716,56 +900,54 @@
 
     let currentResultRows = [];
 
+    function decisionBadgeLabel(combined) {
+      if (combined === 'BLOCK') return 'BLOCK';
+      if (combined === 'REVIEW') return 'REVIEW';
+      return 'OK';
+    }
+
+    function decisionBadgeClass(combined) {
+      if (combined === 'BLOCK') return 'badge-block';
+      if (combined === 'REVIEW') return 'badge-review';
+      return 'badge-ok';
+    }
+
     function renderResults(rows) {
       const section = document.getElementById('results-section');
-      const tbody = document.getElementById('results-body');
+      const listEl = document.getElementById('results-list');
       const tsvBlock = document.getElementById('tsv-block');
-      const breakdownText = document.getElementById('risk-breakdown-text');
+      const detailsText = document.getElementById('row-details-text');
 
       if (!rows.length) {
         section.hidden = true;
         currentResultRows = [];
         selectedRowIndex = -1;
-        document.getElementById('fetch-repo-trust-btn').disabled = true;
-        document.getElementById('repo-trust-text').value = '';
+        detailsText.value = '';
         return;
       }
 
       currentResultRows = rows;
       section.hidden = false;
-      breakdownText.value = '';
+      detailsText.value = '';
       selectedRowIndex = -1;
-      document.getElementById('fetch-repo-trust-btn').disabled = true;
-      document.getElementById('repo-trust-text').value = '';
 
-      tbody.innerHTML = rows
+      listEl.innerHTML = rows
         .map(
           (r, idx) => {
-            const link = r.extensionId ? MARKETPLACE_ITEM_URL + encodeURIComponent(r.extensionId) : '';
-            const linkCell = link
-              ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open</a>`
-              : '';
             const combined = combinedDecision(r.riskDecision, r.repoTrust);
             const decisionClass = combined === 'BLOCK' ? 'risk-block' : combined === 'REVIEW' ? 'risk-review' : '';
-            const triggeredText = Array.isArray(r.triggeredRules) && r.triggeredRules.length ? r.triggeredRules.join(', ') : '—';
-            const extCell = extensionCellText(r);
-            const ghCell = githubCellText(r);
-            return `<tr class="${decisionClass}" data-row-index="${idx}">
-              <td>${escapeHtml(r.publisher)}</td>
-              <td>${escapeHtml(r.extensionName)}</td>
-              <td>${escapeHtml(r.currentVersion || '—')}</td>
-              <td>${escapeHtml(r.lastVersion || '—')}</td>
-              <td>${escapeHtml(r.lastVersionUpdateDate)}</td>
-              <td>${escapeHtml(r.rating)}</td>
-              <td>${escapeHtml(r.ratingCount ?? '—')}</td>
-              <td>${escapeHtml(r.installCount || '—')}</td>
-              <td>${escapeHtml(extCell)}</td>
-              <td>${escapeHtml(ghCell)}</td>
-              <td>${escapeHtml(combined)}</td>
-              <td title="${escapeHtml(triggeredText)}">${escapeHtml(triggeredText.length > 60 ? triggeredText.slice(0, 57) + '…' : triggeredText)}</td>
-              <td>${linkCell}</td>
-              <td class="${r.error ? 'error-cell' : ''}">${escapeHtml(r.error)}</td>
-            </tr>`;
+            const badgeLabel = decisionBadgeLabel(combined);
+            const badgeClass = decisionBadgeClass(combined);
+            const link = r.extensionId ? MARKETPLACE_ITEM_URL + encodeURIComponent(r.extensionId) : '';
+            const nameContent = link
+              ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.extensionId || r.extensionName)}</a>`
+              : escapeHtml(r.extensionId || r.extensionName);
+            return `<li class="${decisionClass}" data-row-index="${idx}">
+              <span class="badge ${badgeClass}">${escapeHtml(badgeLabel)}</span>
+              <span class="ext-name">${nameContent}</span>
+              ${extensionPillHtml(r)}
+              ${githubPillHtml(r)}
+            </li>`;
           }
         )
         .join('');
@@ -775,65 +957,50 @@
 
     function refreshResultsBody() {
       if (!currentResultRows.length) return;
-      const tbody = document.getElementById('results-body');
+      const listEl = document.getElementById('results-list');
       const tsvBlock = document.getElementById('tsv-block');
       const prevSelected = selectedRowIndex;
-      tbody.innerHTML = currentResultRows
+      listEl.innerHTML = currentResultRows
         .map(
           (r, idx) => {
-            const link = r.extensionId ? MARKETPLACE_ITEM_URL + encodeURIComponent(r.extensionId) : '';
-            const linkCell = link
-              ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open</a>`
-              : '';
             const combined = combinedDecision(r.riskDecision, r.repoTrust);
             const decisionClass = combined === 'BLOCK' ? 'risk-block' : combined === 'REVIEW' ? 'risk-review' : '';
-            const triggeredText = Array.isArray(r.triggeredRules) && r.triggeredRules.length ? r.triggeredRules.join(', ') : '—';
-            const extCell = extensionCellText(r);
-            const ghCell = githubCellText(r);
-            return `<tr class="${decisionClass}" data-row-index="${idx}">
-              <td>${escapeHtml(r.publisher)}</td>
-              <td>${escapeHtml(r.extensionName)}</td>
-              <td>${escapeHtml(r.currentVersion || '—')}</td>
-              <td>${escapeHtml(r.lastVersion || '—')}</td>
-              <td>${escapeHtml(r.lastVersionUpdateDate)}</td>
-              <td>${escapeHtml(r.rating)}</td>
-              <td>${escapeHtml(r.ratingCount ?? '—')}</td>
-              <td>${escapeHtml(r.installCount || '—')}</td>
-              <td>${escapeHtml(extCell)}</td>
-              <td>${escapeHtml(ghCell)}</td>
-              <td>${escapeHtml(combined)}</td>
-              <td title="${escapeHtml(triggeredText)}">${escapeHtml(triggeredText.length > 60 ? triggeredText.slice(0, 57) + '…' : triggeredText)}</td>
-              <td>${linkCell}</td>
-              <td class="${r.error ? 'error-cell' : ''}">${escapeHtml(r.error)}</td>
-            </tr>`;
+            const badgeLabel = decisionBadgeLabel(combined);
+            const badgeClass = decisionBadgeClass(combined);
+            const link = r.extensionId ? MARKETPLACE_ITEM_URL + encodeURIComponent(r.extensionId) : '';
+            const nameContent = link
+              ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.extensionId || r.extensionName)}</a>`
+              : escapeHtml(r.extensionId || r.extensionName);
+            return `<li class="${decisionClass}" data-row-index="${idx}">
+              <span class="badge ${badgeClass}">${escapeHtml(badgeLabel)}</span>
+              <span class="ext-name">${nameContent}</span>
+              ${extensionPillHtml(r)}
+              ${githubPillHtml(r)}
+            </li>`;
           }
         )
         .join('');
       tsvBlock.value = buildTsv(currentResultRows);
       if (prevSelected >= 0 && prevSelected < currentResultRows.length) {
-        const tr = tbody.querySelector(`tr[data-row-index="${prevSelected}"]`);
-        if (tr) tr.classList.add('selected');
+        const li = listEl.querySelector(`li[data-row-index="${prevSelected}"]`);
+        if (li) li.classList.add('selected');
       }
     }
 
     let selectedRowIndex = -1;
 
-    document.getElementById('results-body').addEventListener('click', (ev) => {
-      const tbody = ev.currentTarget;
-      const tr = ev.target.closest('tr');
-      if (!tr || !tbody.contains(tr)) return;
-      const idx = parseInt(tr.getAttribute('data-row-index'), 10);
+    document.getElementById('results-list').addEventListener('click', async (ev) => {
+      const listEl = ev.currentTarget;
+      const li = ev.target.closest('li');
+      if (!li || !listEl.contains(li)) return;
+      const idx = parseInt(li.getAttribute('data-row-index'), 10);
       if (isNaN(idx) || idx < 0 || idx >= currentResultRows.length) return;
-      tbody.querySelectorAll('tr.selected').forEach((row) => row.classList.remove('selected'));
-      tr.classList.add('selected');
+      listEl.querySelectorAll('li.selected').forEach((row) => row.classList.remove('selected'));
+      li.classList.add('selected');
       selectedRowIndex = idx;
       const row = currentResultRows[idx];
-      document.getElementById('risk-breakdown-text').value = buildRiskBreakdownText(row);
-      const repoBtn = document.getElementById('fetch-repo-trust-btn');
-      repoBtn.disabled = !row.repoUrl;
-      if (!row.repoUrl) {
-        document.getElementById('repo-trust-text').value = '';
-      }
+      const policy = await ensureRepoPolicy();
+      document.getElementById('row-details-text').value = buildRowDetailsText(row, policy);
     });
 
     const MAX_EXTENSIONS_PER_REQUEST = 16;
@@ -984,6 +1151,27 @@
           if (row.riskBreakdown === undefined) row.riskBreakdown = [];
         });
         renderResults(rows);
+
+        const rowsWithRepo = rows.filter((r) => r.repoUrl);
+        for (let i = 0; i < rowsWithRepo.length; i++) {
+          const row = rowsWithRepo[i];
+          setStatus(`GitHub repo ${i + 1} of ${rowsWithRepo.length}…`, 'loading');
+          try {
+            const res = await fetch('/api/github-repo', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ repoUrl: row.repoUrl }),
+            });
+            const data = await res.json();
+            if (res.ok && data) {
+              row.repo = data.repo;
+              row.repoTrust = data.repoTrust;
+            }
+          } catch (err) {
+            console.warn('[Extension Checker] Repo fetch failed for', row.repoUrl, err);
+          }
+          refreshResultsBody();
+        }
         setStatus('');
       } catch (err) {
         setStatus(err.message || 'Request failed', 'error');
@@ -1019,9 +1207,6 @@
         setStatus('Selected row has no repo link', 'error');
         return;
       }
-      const repoBtn = document.getElementById('fetch-repo-trust-btn');
-      const repoText = document.getElementById('repo-trust-text');
-      repoBtn.disabled = true;
       setStatus('Fetching repo data…', 'loading');
       try {
         const res = await fetch('/api/github-repo', {
@@ -1031,40 +1216,35 @@
         });
         const data = await res.json();
         if (!res.ok) {
-          repoText.value = 'Error: ' + (data.error || res.status);
+          const detailsEl = document.getElementById('row-details-text');
+          if (detailsEl) detailsEl.value = 'Error: ' + (data.error || res.status);
           setStatus(data.error || 'Request failed', 'error');
           return;
         }
-        let policy = null;
-        try {
-          const policyRes = await fetch('/github-repo-safety-policy.json');
-          if (policyRes.ok) policy = await policyRes.json();
-        } catch {}
-        const sections = [];
-        if (data.repo && !data.repo.error) {
-          sections.push(formatRepoDetails(data.repo));
-        } else if (data.repo?.error) {
-          sections.push('Repo error: ' + data.repo.error);
-        }
-        sections.push('');
-        sections.push(formatRepoTrustSection(data.repoTrust));
-        sections.push('');
-        sections.push(formatAllRepoPolicyRules(policy));
-        repoText.value = sections.join('\n');
         row.repo = data.repo;
         row.repoTrust = data.repoTrust;
         refreshResultsBody();
+        const policy = await ensureRepoPolicy();
+        const detailsEl = document.getElementById('row-details-text');
+        if (detailsEl) detailsEl.value = buildRowDetailsText(row, policy);
         setStatus('');
       } catch (err) {
-        repoText.value = 'Error: ' + (err.message || 'Request failed');
+        const detailsEl = document.getElementById('row-details-text');
+        if (detailsEl) detailsEl.value = 'Error: ' + (err.message || 'Request failed');
         setStatus(err.message || 'Request failed', 'error');
       }
-      repoBtn.disabled = false;
     }
 
     document.getElementById('fetch-btn').addEventListener('click', fetchDetails);
     document.getElementById('copy-btn').addEventListener('click', copyTsv);
-    document.getElementById('fetch-repo-trust-btn').addEventListener('click', fetchRepoTrust);
+
+    document.getElementById('parsed-flyout-trigger').addEventListener('click', function () {
+      const section = document.getElementById('parsed-section');
+      const trigger = this;
+      const open = section.classList.toggle('is-open');
+      trigger.setAttribute('aria-expanded', open);
+    });
+
     update();
   </script>
 </body>
