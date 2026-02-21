@@ -1,5 +1,5 @@
 # Worker name; also the subdomain: https://everyminute.<account>.workers.dev
-name = "everyminute"
+name = "check-vscode-extension"
 main = "src/worker.js"
 compatibility_date = "2025-02-20"
 
