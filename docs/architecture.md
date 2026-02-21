@@ -88,9 +88,9 @@ flowchart TB
 
 ## Limits and constraints
 
-- **Cloudflare Workers** free tier: 50 subrequests per request. Hence max 49 extensions per `POST /api/fetch-extensions` (1 subrequest for policy + 49 for Marketplace).
+- **Cloudflare Workers** free tier: 50 subrequests per request. Hence max 24 extensions per `POST /api/fetch-extensions` (1 policy + up to 24 Marketplace queries + up to 24 manifest fetches when repo URL is read from package.json).
 - **GitHub API** unauthenticated: 60 requests/hour. Set `GITHUB_TOKEN` in Worker env for higher limits.
-- **Marketplace** has no documented rate limit; we use a single batch of up to 49 extension lookups per API call.
+- **Marketplace** has no documented rate limit; we use a single batch of up to 24 extension lookups per API call (plus optional manifest fetch per extension for repository URL).
 
 ## Static assets and SPA
 

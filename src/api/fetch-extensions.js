@@ -11,6 +11,7 @@ const MARKETPLACE_URL =
   'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery?api-version=3.0-preview.1';
 
 const ASSET_TYPE_REPOSITORY = 'Microsoft.VisualStudio.Services.Links.Source';
+const ASSET_TYPE_MANIFEST = 'Microsoft.VisualStudio.Code.Manifest';
 
 // Known public hosts; repo URL from manifest/Marketplace is considered "public" if it points here.
 const PUBLIC_REPO_HOSTS = [
@@ -21,6 +22,7 @@ const PUBLIC_REPO_HOSTS = [
   'codeberg.org',
 ];
 
+/** Get repo URL from version.properties (Marketplace sometimes omits this). */
 function getRepositoryUrlFromVersion(version) {
   if (!version) return null;
   if (version.properties && Array.isArray(version.properties)) {
@@ -28,6 +30,36 @@ function getRepositoryUrlFromVersion(version) {
     if (repoProp && typeof repoProp.value === 'string') return repoProp.value.trim();
   }
   return null;
+}
+
+/** True if this version has a Repository asset (link exists but URL may only be in manifest). */
+function versionHasRepositoryAsset(version) {
+  if (!version?.files || !Array.isArray(version.files)) return false;
+  return version.files.some((f) => f.assetType === ASSET_TYPE_REPOSITORY);
+}
+
+/**
+ * Fetch extension manifest (package.json) from Marketplace and parse repository field.
+ * Supports "repository": "url" or "repository": { "type": "git", "url": "..." }.
+ */
+async function getRepositoryUrlFromManifest(version) {
+  const base = version?.fallbackAssetUri || version?.assetUri;
+  if (!base || typeof base !== 'string') return null;
+  const manifestUrl = `${base.replace(/\/$/, '')}/${ASSET_TYPE_MANIFEST}`;
+  try {
+    const res = await fetch(manifestUrl, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return null;
+    const manifest = await res.json();
+    const repo = manifest?.repository;
+    if (!repo) return null;
+    if (typeof repo === 'string') return repo.trim();
+    if (repo && typeof repo.url === 'string') return repo.url.trim();
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function isPublicRepoUrl(url) {
@@ -118,7 +150,10 @@ async function fetchOneExtension(extensionId) {
   const publisherFlags = ext.publisher?.flags ?? '';
   const publisherVerified = typeof publisherFlags === 'string' && publisherFlags.indexOf('verified') !== -1;
 
-  const repoUrl = getRepositoryUrlFromVersion(latest);
+  let repoUrl = getRepositoryUrlFromVersion(latest);
+  if (!repoUrl && versionHasRepositoryAsset(latest)) {
+    repoUrl = await getRepositoryUrlFromManifest(latest);
+  }
   const hasPublicRepo = isPublicRepoUrl(repoUrl);
 
   return {
@@ -139,8 +174,9 @@ async function fetchOneExtension(extensionId) {
 }
 
 const BATCH_SIZE = 10;
-// Stay under Cloudflare Workers subrequest limit (50 on free tier = 1 policy fetch + N Marketplace fetches).
-const MAX_EXTENSIONS = 49;
+// Stay under Cloudflare Workers subrequest limit (50 on free tier).
+// Each extension can use 2 subrequests (query + optional manifest for repo URL), plus 1 for policy.
+const MAX_EXTENSIONS = 24;
 
 async function runInBatches(arr, batchSize, fn) {
   const results = [];
