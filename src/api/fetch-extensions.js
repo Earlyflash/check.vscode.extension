@@ -41,7 +41,7 @@ async function getRepositoryUrlFromManifest(version, ext) {
   let manifestUrl = null;
   const base = version?.fallbackAssetUri || version?.assetUri;
   if (base && typeof base === 'string') {
-    manifestUrl = `${base.replace(/\/$/, '')}/assetbyname/${ASSET_TYPE_MANIFEST}`;
+    manifestUrl = `${base.replace(/\/$/, '')}/${ASSET_TYPE_MANIFEST}`;
   } else if (ext?.publisher?.publisherName && ext?.extensionName && version?.version) {
     const publisher = encodeURIComponent(ext.publisher.publisherName.toLowerCase());
     const extensionName = encodeURIComponent(ext.extensionName.toLowerCase());
