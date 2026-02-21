@@ -398,21 +398,127 @@
 
     .details-panel {
       margin-top: 1rem;
-    }
-    .details-panel label { display: block; margin-bottom: 0.25rem; font-size: 0.85rem; color: var(--muted); }
-    .details-panel .details-text {
-      width: 100%;
-      min-height: 200px;
-      padding: 0.75rem 1rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      line-height: 1.5;
+      padding: 1rem;
       background: var(--surface);
       border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .details-panel .detail-placeholder {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .details-panel .detail-section-box {
+      border: 1px solid var(--border);
       border-radius: 8px;
-      color: var(--text);
-      resize: vertical;
-      white-space: pre-wrap;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .details-panel .detail-section-box:last-child { margin-bottom: 0; }
+    .details-panel .detail-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: rgba(0,0,0,0.15);
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .details-panel .detail-section-header:hover { background: rgba(0,0,0,0.25); }
+    .details-panel .detail-section-header .detail-section-icon {
+      font-size: 0.7rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+    .details-panel .detail-section-box.collapsed .detail-section-icon { transform: rotate(-90deg); }
+    .details-panel .detail-section-body {
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+    }
+    .details-panel .detail-section-box.collapsed .detail-section-body { display: none; }
+
+    .details-panel .detail-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.35rem 1.5rem;
+      align-items: baseline;
+      font-size: 0.85rem;
+    }
+    .details-panel .detail-grid-h {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 1.5rem;
+      font-size: 0.85rem;
+    }
+    .details-panel .detail-grid-h .detail-pair { display: flex; align-items: baseline; gap: 0.35rem; }
+    .details-panel .detail-grid-h .detail-label { margin-right: 0; }
+    .details-panel .detail-label { color: var(--muted); }
+    .details-panel .detail-value { font-family: 'JetBrains Mono', monospace; }
+    .details-panel .detail-link {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--accent);
+      background: rgba(167, 139, 250, 0.15);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .details-panel .detail-link:hover {
+      background: rgba(167, 139, 250, 0.25);
+    }
+    .details-panel .detail-score-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .details-panel .detail-score-badge {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .details-panel .detail-score-badge.ok { background: rgba(52, 211, 153, 0.2); color: var(--valid); }
+    .details-panel .detail-score-badge.review { background: rgba(251, 191, 36, 0.25); color: #f59e0b; }
+    .details-panel .detail-score-badge.block { background: rgba(248, 113, 113, 0.2); color: var(--invalid); }
+    .details-panel .rules-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.25rem 0 0;
+    }
+    .details-panel .rule-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.2rem 0;
+      font-size: 0.8rem;
+    }
+    .details-panel .rule-item input[type="checkbox"] {
+      accent-color: var(--accent);
+      cursor: default;
+    }
+    .details-panel .rule-item.triggered { color: var(--invalid); }
+    .details-panel .rule-item.triggered .rule-points { color: var(--muted); font-size: 0.75rem; }
+
+    .details-panel .detail-trust-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    @media (max-width: 640px) {
+      .details-panel .detail-trust-row { grid-template-columns: 1fr; }
     }
 
     .breakdowns-row {
@@ -476,9 +582,9 @@
     <section class="results-section" id="results-section" hidden>
       <p class="hint" style="margin-top: 0;">Click a row to see full details below. <strong>Extension</strong> and <strong>GitHub</strong> = trust scores; <strong>OK</strong> / <strong>REVIEW</strong> / <strong>BLOCK</strong> = overall rating.</p>
       <ul class="results-list" id="results-list"></ul>
-      <div class="details-panel">
-        <label for="row-details-text">Details</label>
-        <textarea id="row-details-text" class="details-text" readonly placeholder="Select a row above to see marketplace details, extension trust breakdown, and GitHub repo trust."></textarea>
+      <div class="details-panel" id="details-panel">
+        <div class="detail-placeholder" id="details-placeholder">Select a row above to see marketplace details, extension trust, and GitHub repo trust.</div>
+        <div id="row-details-inner" hidden></div>
       </div>
       <div class="copy-area">
         <label for="tsv-block">Copy to Excel (tab-separated)</label>
@@ -820,6 +926,137 @@
       return sections.join('\n');
     }
 
+    const EXTENSION_RULE_NAMES = [
+      'Publisher changed recently', 'Long dormancy detected', 'Recent update risk window',
+      'No update in 12+ months', 'Major jump after dormancy', 'Low install count', 'Low rating',
+      'Obfuscated code', 'Uses child_process', 'Uses eval', 'Hard coded IP', 'Downloads remote code',
+      'No public repository', 'Recent repo transfer', 'New maintainer recently added',
+    ];
+    const REPO_RULE_NAMES = [
+      'Low star count', 'No or very few forks', 'High open issue count',
+      'High open-issues-to-stars ratio', 'Repo very new', 'Repo dormant (no recent push)',
+      'No contributors listed', 'Solo maintainer',
+    ];
+
+    function renderRowDetails(row, repoPolicy) {
+      const inner = document.getElementById('row-details-inner');
+      const placeholder = document.getElementById('details-placeholder');
+      if (!inner || !placeholder) return;
+
+      const extDecision = row.riskDecision === 'ALLOW' ? 'OK' : (row.riskDecision || '—');
+      const extDecisionClass = row.riskDecision === 'BLOCK' ? 'block' : row.riskDecision === 'REVIEW' ? 'review' : 'ok';
+      const triggeredSet = new Set(Array.isArray(row.triggeredRules) ? row.triggeredRules : []);
+      const breakdownMap = new Map((Array.isArray(row.riskBreakdown) ? row.riskBreakdown : []).map((x) => [x.rule, x.points]));
+
+      const extRulesHtml = EXTENSION_RULE_NAMES.map((rule) => {
+        const triggered = triggeredSet.has(rule);
+        const points = breakdownMap.get(rule);
+        const pointsStr = points != null ? ` +${points}` : '';
+        return `<li class="rule-item ${triggered ? 'triggered' : ''}">
+          <input type="checkbox" ${triggered ? 'checked' : ''} disabled>
+          <span>${escapeHtml(rule)}</span>
+          ${triggered && pointsStr ? `<span class="rule-points">${escapeHtml(pointsStr)}</span>` : ''}
+        </li>`;
+      }).join('');
+
+      const marketplaceUrl = row.extensionId ? MARKETPLACE_ITEM_URL + encodeURIComponent(row.extensionId) : '';
+      const extLinkHtml = marketplaceUrl
+        ? `<a href="${escapeHtml(marketplaceUrl)}" target="_blank" rel="noopener noreferrer" class="detail-link">Open in Marketplace</a>`
+        : '—';
+      const ghLinkHtml = row.repoUrl
+        ? `<a href="${escapeHtml(row.repoUrl)}" target="_blank" rel="noopener noreferrer" class="detail-link">Open on GitHub</a>`
+        : '—';
+
+      const marketplaceBodyHtml = `
+        <div class="detail-grid-h">
+          <span class="detail-pair"><span class="detail-label">Extension</span> <span class="detail-value">${escapeHtml(row.extensionId || row.extensionName || '—')}</span></span>
+          <span class="detail-pair"><span class="detail-label">Link</span> ${extLinkHtml}</span>
+          <span class="detail-pair"><span class="detail-label">Publisher</span> <span class="detail-value">${escapeHtml(row.publisher || '—')}</span></span>
+          <span class="detail-pair"><span class="detail-label">Version</span> <span class="detail-value">${escapeHtml(row.currentVersion || '—')}</span></span>
+          <span class="detail-pair"><span class="detail-label">Last updated</span> <span class="detail-value">${escapeHtml(row.lastVersionUpdateDate || '—')}</span></span>
+          <span class="detail-pair"><span class="detail-label">Rating</span> <span class="detail-value">${escapeHtml(row.rating != null ? row.rating : '—')}</span></span>
+          <span class="detail-pair"><span class="detail-label">Reviews</span> <span class="detail-value">${escapeHtml(row.ratingCount != null ? row.ratingCount : '—')}</span></span>
+          <span class="detail-pair"><span class="detail-label">Installs</span> <span class="detail-value">${escapeHtml(row.installCount != null ? row.installCount : '—')}</span></span>
+          <span class="detail-pair"><span class="detail-label">GitHub</span> ${ghLinkHtml}</span>
+          ${row.error ? `<span class="detail-pair"><span class="detail-label">Error</span> <span class="detail-value" style="color:var(--invalid)">${escapeHtml(row.error)}</span></span>` : ''}
+        </div>`;
+
+      let extTrustHtml = `
+        <div class="detail-section-box">
+          <button type="button" class="detail-section-header" aria-expanded="true">
+            Extension trust
+            <span class="detail-section-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="detail-section-body">
+            <div class="detail-score-row">
+              <span class="detail-value">Score: ${escapeHtml(String(row.riskScore ?? '—'))}</span>
+              <span class="detail-score-badge ${extDecisionClass}">${escapeHtml(extDecision)}</span>
+            </div>
+            <ul class="rules-list">${extRulesHtml}</ul>
+          </div>
+        </div>`;
+
+      let ghTrustHtml = '';
+      if (row.repoUrl) {
+        const rt = row.repoTrust;
+        const repoTriggered = rt ? new Set(rt.triggeredRules || []) : new Set();
+        const repoBreakdown = rt && rt.triggeredWithPoints ? new Map(rt.triggeredWithPoints.map((x) => [x.rule, x.points])) : new Map();
+        const allRepoRules = [...REPO_RULE_NAMES];
+        rt && rt.triggeredRules && rt.triggeredRules.forEach((r) => { if (!REPO_RULE_NAMES.includes(r)) allRepoRules.push(r); });
+        const repoRulesHtml = allRepoRules.map((rule) => {
+          const triggered = repoTriggered.has(rule);
+          const points = repoBreakdown.get(rule);
+          const pointsStr = points != null ? ` +${points}` : '';
+          return `<li class="rule-item ${triggered ? 'triggered' : ''}">
+            <input type="checkbox" ${triggered ? 'checked' : ''} disabled>
+            <span>${escapeHtml(rule)}</span>
+            ${triggered && pointsStr ? `<span class="rule-points">${escapeHtml(pointsStr)}</span>` : ''}
+          </li>`;
+        }).join('');
+        const repoDecision = rt && (rt.decision === 'ALLOW' || rt.decision === 'OK') ? 'OK' : (rt && rt.decision) || '—';
+        const repoDecisionClass = rt && rt.decision === 'BLOCK' ? 'block' : rt && rt.decision === 'REVIEW' ? 'review' : 'ok';
+        const repoScore = rt && rt.score != null ? rt.score : '—';
+        ghTrustHtml = `
+        <div class="detail-section-box">
+          <button type="button" class="detail-section-header" aria-expanded="true">
+            GitHub repo trust
+            <span class="detail-section-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="detail-section-body">
+            <div class="detail-score-row">
+              <span class="detail-value">Score: ${escapeHtml(String(repoScore))}</span>
+              <span class="detail-score-badge ${repoDecisionClass}">${escapeHtml(repoDecision)}</span>
+            </div>
+            <ul class="rules-list">${repoRulesHtml}</ul>
+          </div>
+        </div>`;
+      }
+
+      const fullHtml = `
+        <div class="detail-section-box">
+          <button type="button" class="detail-section-header" aria-expanded="true">
+            Marketplace
+            <span class="detail-section-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="detail-section-body">${marketplaceBodyHtml}</div>
+        </div>
+        <div class="detail-trust-row">
+          ${extTrustHtml}
+          ${ghTrustHtml}
+        </div>`;
+
+      inner.innerHTML = fullHtml;
+      inner.hidden = false;
+      placeholder.hidden = true;
+    }
+
+    function clearRowDetails() {
+      const inner = document.getElementById('row-details-inner');
+      const placeholder = document.getElementById('details-placeholder');
+      if (inner) { inner.innerHTML = ''; inner.hidden = true; }
+      if (placeholder) placeholder.hidden = false;
+    }
+
     /** Combined decision: BLOCK if either is BLOCK, else REVIEW if either is REVIEW, else ALLOW. */
     function combinedDecision(extDecision, repoTrust) {
       const ext = extDecision === 'BLOCK' || extDecision === 'REVIEW' || extDecision === 'ALLOW' ? extDecision : null;
@@ -916,19 +1153,18 @@
       const section = document.getElementById('results-section');
       const listEl = document.getElementById('results-list');
       const tsvBlock = document.getElementById('tsv-block');
-      const detailsText = document.getElementById('row-details-text');
 
       if (!rows.length) {
         section.hidden = true;
         currentResultRows = [];
         selectedRowIndex = -1;
-        detailsText.value = '';
+        clearRowDetails();
         return;
       }
 
       currentResultRows = rows;
       section.hidden = false;
-      detailsText.value = '';
+      clearRowDetails();
       selectedRowIndex = -1;
 
       listEl.innerHTML = rows
@@ -1000,7 +1236,7 @@
       selectedRowIndex = idx;
       const row = currentResultRows[idx];
       const policy = await ensureRepoPolicy();
-      document.getElementById('row-details-text').value = buildRowDetailsText(row, policy);
+      renderRowDetails(row, policy);
     });
 
     const MAX_EXTENSIONS_PER_REQUEST = 16;
@@ -1216,8 +1452,6 @@
         });
         const data = await res.json();
         if (!res.ok) {
-          const detailsEl = document.getElementById('row-details-text');
-          if (detailsEl) detailsEl.value = 'Error: ' + (data.error || res.status);
           setStatus(data.error || 'Request failed', 'error');
           return;
         }
@@ -1225,12 +1459,13 @@
         row.repoTrust = data.repoTrust;
         refreshResultsBody();
         const policy = await ensureRepoPolicy();
-        const detailsEl = document.getElementById('row-details-text');
-        if (detailsEl) detailsEl.value = buildRowDetailsText(row, policy);
+        renderRowDetails(row, policy);
         setStatus('');
       } catch (err) {
-        const detailsEl = document.getElementById('row-details-text');
-        if (detailsEl) detailsEl.value = 'Error: ' + (err.message || 'Request failed');
+        if (selectedRowIndex >= 0 && selectedRowIndex < currentResultRows.length) {
+          const policy = await ensureRepoPolicy();
+          renderRowDetails(currentResultRows[selectedRowIndex], policy);
+        }
         setStatus(err.message || 'Request failed', 'error');
       }
     }
@@ -1243,6 +1478,15 @@
       const trigger = this;
       const open = section.classList.toggle('is-open');
       trigger.setAttribute('aria-expanded', open);
+    });
+
+    document.getElementById('details-panel').addEventListener('click', function (e) {
+      const header = e.target.closest('.detail-section-header');
+      if (!header) return;
+      const box = header.closest('.detail-section-box');
+      if (!box) return;
+      box.classList.toggle('collapsed');
+      header.setAttribute('aria-expanded', box.classList.contains('collapsed') ? 'false' : 'true');
     });
 
     update();

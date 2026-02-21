@@ -31,7 +31,7 @@
       "flagIfDormant": true
     },
     "maintainers": {
-      "minContributors": 1,
+      "minContributors": 3,
       "flagIfSoloMaintainer": true
     }
   }
