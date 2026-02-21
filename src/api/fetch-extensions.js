@@ -32,20 +32,23 @@ function getRepositoryUrlFromVersion(version) {
   return null;
 }
 
-/** True if this version has a Repository asset (link exists but URL may only be in manifest). */
-function versionHasRepositoryAsset(version) {
-  if (!version?.files || !Array.isArray(version.files)) return false;
-  return version.files.some((f) => f.assetType === ASSET_TYPE_REPOSITORY);
-}
-
 /**
  * Fetch extension manifest (package.json) from Marketplace and parse repository field.
- * Supports "repository": "url" or "repository": { "type": "git", "url": "..." }.
+ * Supports: "repository": "url", "repository": { "type": "git", "url": "..." }, "repository": "github:owner/repo".
+ * Tries version.assetUri first, then gallery publisher/extension assetbyname URL.
  */
-async function getRepositoryUrlFromManifest(version) {
+async function getRepositoryUrlFromManifest(version, ext) {
+  let manifestUrl = null;
   const base = version?.fallbackAssetUri || version?.assetUri;
-  if (!base || typeof base !== 'string') return null;
-  const manifestUrl = `${base.replace(/\/$/, '')}/${ASSET_TYPE_MANIFEST}`;
+  if (base && typeof base === 'string') {
+    manifestUrl = `${base.replace(/\/$/, '')}/${ASSET_TYPE_MANIFEST}`;
+  } else if (ext?.publisher?.publisherName && ext?.extensionName && version?.version) {
+    const publisher = encodeURIComponent(ext.publisher.publisherName.toLowerCase());
+    const extensionName = encodeURIComponent(ext.extensionName.toLowerCase());
+    const ver = encodeURIComponent(version.version);
+    manifestUrl = `https://${ext.publisher.publisherName.toLowerCase()}.gallery.vsassets.io/_apis/public/gallery/publisher/${publisher}/extension/${extensionName}/${ver}/assetbyname/${ASSET_TYPE_MANIFEST}`;
+  }
+  if (!manifestUrl) return null;
   try {
     const res = await fetch(manifestUrl, {
       headers: { Accept: 'application/json' },
@@ -54,7 +57,14 @@ async function getRepositoryUrlFromManifest(version) {
     const manifest = await res.json();
     const repo = manifest?.repository;
     if (!repo) return null;
-    if (typeof repo === 'string') return repo.trim();
+    if (typeof repo === 'string') {
+      const s = repo.trim();
+      if (s.startsWith('github:')) {
+        const rest = s.slice(7).trim().replace(/^\/+|\/+$/g, '');
+        return rest ? `https://github.com/${rest}` : null;
+      }
+      return s || null;
+    }
     if (repo && typeof repo.url === 'string') return repo.url.trim();
     return null;
   } catch {
@@ -151,8 +161,8 @@ async function fetchOneExtension(extensionId) {
   const publisherVerified = typeof publisherFlags === 'string' && publisherFlags.indexOf('verified') !== -1;
 
   let repoUrl = getRepositoryUrlFromVersion(latest);
-  if (!repoUrl && versionHasRepositoryAsset(latest)) {
-    repoUrl = await getRepositoryUrlFromManifest(latest);
+  if (!repoUrl && latest) {
+    repoUrl = await getRepositoryUrlFromManifest(latest, ext);
   }
   const hasPublicRepo = isPublicRepoUrl(repoUrl);
 
