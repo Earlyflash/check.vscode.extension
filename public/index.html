@@ -1388,10 +1388,16 @@
         });
         renderResults(rows);
 
-        const rowsWithRepo = rows.filter((r) => r.repoUrl);
-        for (let i = 0; i < rowsWithRepo.length; i++) {
-          const row = rowsWithRepo[i];
-          setStatus(`GitHub repo ${i + 1} of ${rowsWithRepo.length}…`, 'loading');
+        const repoCount = rows.filter((r) => r.repoUrl).length;
+        let repoDone = 0;
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row.repoUrl) continue;
+          repoDone += 1;
+          setStatus(`GitHub repo ${repoDone} of ${repoCount}…`, 'loading');
+          if (repoDone > 1) {
+            await new Promise((r) => setTimeout(r, 400));
+          }
           try {
             const res = await fetch('/api/github-repo', {
               method: 'POST',
