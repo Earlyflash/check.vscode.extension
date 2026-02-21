@@ -89,6 +89,19 @@ async function fetchOneExtension(extensionId) {
   };
 }
 
+const BATCH_SIZE = 10;
+const MAX_EXTENSIONS = 250;
+
+async function runInBatches(arr, batchSize, fn) {
+  const results = [];
+  for (let i = 0; i < arr.length; i += batchSize) {
+    const batch = arr.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
 export async function handleFetchExtensions(request) {
   let extensions;
   try {
@@ -101,10 +114,24 @@ export async function handleFetchExtensions(request) {
     if (extensions.length === 0) {
       return Response.json({ error: 'No extension IDs provided' }, { status: 400 });
     }
+    if (extensions.length > MAX_EXTENSIONS) {
+      return Response.json(
+        { error: `Too many extensions (max ${MAX_EXTENSIONS}). Split your list or reduce the number.` },
+        { status: 400 }
+      );
+    }
   } catch {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const results = await Promise.all(extensions.map((id) => fetchOneExtension(id)));
-  return Response.json({ results });
+  try {
+    const results = await runInBatches(extensions, BATCH_SIZE, (id) => fetchOneExtension(id));
+    return Response.json({ results });
+  } catch (err) {
+    console.error('handleFetchExtensions error:', err);
+    return Response.json(
+      { error: err.message || 'Failed to fetch extension data. Try fewer extensions or try again.' },
+      { status: 500 }
+    );
+  }
 }
